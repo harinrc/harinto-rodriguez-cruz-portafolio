@@ -1,0 +1,552 @@
+/* ==========================================================================
+   VARIABLES GLOBALES - TEMÁTICA CRIMSON TECH (INGENIERÍA UdeM)
+   ========================================================================== */
+:root {
+    --bg-color: #0f172a;       /* Azul pizarra ultra oscuro (Fondo Principal) */
+    --text-color: #f8fafc;     /* Blanco técnico */
+    --text-muted: #94a3b8;    /* Gris atenuado para descripciones secundarias */
+    --card-bg: #1e293b;       /* Gris azulado oscuro para contenedores y tarjetas */
+    --primary-color: #dc2626;  /* Rojo Crimson Principal */
+    --accent-color: #ef4444;   /* Rojo vibrante para efectos Hover */
+    --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* El interruptor mantiene la coherencia si decides alternar entre variantes */
+[data-theme="light"] {
+    --bg-color: #f8fafc;
+    --text-color: #0f172a;
+    --text-muted: #475569;
+    --card-bg: #ffffff;
+    --primary-color: #dc2626;
+    --accent-color: #991b1b;
+    --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* ==========================================================================
+   ESTILOS BASE Y CONFIGURACIÓN ESTRUCTURAL
+   ========================================================================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.4s ease, color 0.4s ease;
+    overflow-x: hidden;
+}
+
+/* ==========================================================================
+   BARRA DE NAVEGACIÓN (NAVBAR)
+   ========================================================================== */
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 8%;
+    background-color: var(--card-bg);
+    box-shadow: var(--card-shadow);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 2px solid rgba(220, 38, 38, 0.1);
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.logo span {
+    color: var(--primary-color);
+}
+
+.nav-links {
+    display: flex;
+    list-style: none;
+    gap: 30px;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 500;
+    font-size: 16px;
+    transition: color 0.3s ease;
+}
+
+.nav-links a:hover {
+    color: var(--primary-color);
+}
+
+.theme-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-color);
+    transition: transform 0.3s ease, color 0.3s ease;
+}
+
+.theme-btn:hover {
+    color: var(--primary-color);
+    transform: rotate(15deg);
+}
+
+/* ==========================================================================
+   SECCIÓN HERO (BIENVENIDA + INTEGRACIÓN DE FOTO DE PERFIL)
+   ========================================================================== */
+.hero-section {
+    min-height: 85vh;
+    display: flex;
+    align-items: center;
+    padding: 60px 8%;
+}
+
+.hero-container {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 50px;
+}
+
+.hero-content {
+    flex: 1;
+}
+
+.hero-content h1 {
+    font-size: 52px;
+    margin-bottom: 12px;
+    line-height: 1.1;
+}
+
+.highlight {
+    color: var(--primary-color);
+    text-shadow: 0 0 20px rgba(220, 38, 38, 0.2);
+}
+
+.hero-content h2 {
+    font-size: 28px;
+    color: var(--text-color);
+    margin-bottom: 25px;
+    font-weight: 600;
+}
+
+#typing-text {
+    color: var(--accent-color);
+    border-right: 3px solid var(--primary-color);
+    padding-right: 5px;
+    animation: blink 0.75s step-end infinite;
+}
+
+.hero-content p {
+    max-width: 600px;
+    font-size: 18px;
+    line-height: 1.6;
+    margin-bottom: 35px;
+    color: var(--text-muted);
+}
+
+/* Contenedor Avanzado para tu Foto de Perfil */
+.hero-image-area {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.profile-hex {
+    position: relative;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%; /* Círculo perfecto, moderno y limpio */
+    padding: 8px;
+    background: linear-gradient(135deg, var(--primary-color), transparent);
+    box-shadow: 0 0 40px rgba(220, 38, 38, 0.25);
+}
+
+.profile-hex img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    background-color: var(--card-bg);
+}
+
+/* ==========================================================================
+   BOTONES INTERACTIVOS
+   ========================================================================== */
+.hero-buttons {
+    display: flex;
+    gap: 20px;
+}
+
+.btn {
+    padding: 14px 28px;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, background-color 0.3s ease;
+}
+
+.primary-btn {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.primary-btn:hover {
+    background-color: var(--accent-color);
+}
+
+.secondary-btn {
+    border: 2px solid var(--primary-color);
+    color: var(--text-color);
+    background-color: transparent;
+}
+
+.secondary-btn:hover {
+    background-color: rgba(220, 38, 38, 0.05);
+    border-color: var(--accent-color);
+}
+
+.btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
+}
+
+/* ==========================================================================
+   SECCIONES COMUNES Y DISEÑO DE CUADRÍCULAS (GRID AUTOMÁTICO)
+   ========================================================================== */
+.section-title {
+    text-align: center;
+    font-size: 38px;
+    margin-bottom: 60px;
+    position: relative;
+    font-weight: 700;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    bottom: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 70px;
+    height: 4px;
+    background-color: var(--primary-color);
+    border-radius: 2px;
+}
+
+.skills-section, .projects-section {
+    padding: 100px 8%;
+}
+
+/* El secreto de ser expandible: minmax(320px, 1fr) organiza todo automáticamente */
+.skills-container, .projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 35px;
+    width: 100%;
+}
+
+/* ==========================================================================
+   TARJETAS COMPONENTIZADAS (SOFTWARE, REDES Y SITIOS WEB)
+   ========================================================================== */
+.skill-card, .project-card {
+    background-color: var(--card-bg);
+    padding: 35px;
+    border-radius: 16px;
+    box-shadow: var(--card-shadow);
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.4s ease, border-color 0.4s ease;
+}
+
+.skill-card:hover, .project-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 40px rgba(220, 38, 38, 0.15);
+    border-color: rgba(220, 38, 38, 0.3);
+}
+
+.skill-icon {
+    font-size: 45px;
+    color: var(--primary-color);
+    margin-bottom: 25px;
+}
+
+.skill-card h3, .project-card h3 {
+    font-size: 24px;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.skill-card ul {
+    list-style: none;
+    text-align: left;
+}
+
+.skill-card li {
+    margin-bottom: 14px;
+    font-size: 16px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+}
+
+.skill-card li i {
+    margin-right: 12px;
+    color: var(--primary-color);
+    font-size: 18px;
+    width: 20px;
+    text-align: center;
+}
+
+/* Estilos de la Galería de Proyectos Web */
+.project-img {
+    height: 180px;
+    background: linear-gradient(135deg, #111827 0%, var(--card-bg) 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+    font-size: 55px;
+    margin-bottom: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Efecto decorativo interno para las imágenes de los proyectos */
+.project-img::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.1), transparent);
+    transition: 0.6s;
+}
+
+.project-card:hover .project-img::before {
+    left: 100%;
+}
+
+.project-info p {
+    font-size: 15px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 25px;
+    min-height: 72px; /* Alineación vertical uniforme */
+}
+
+.tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.tags span {
+    background-color: rgba(220, 38, 38, 0.1);
+    color: #f87171;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    border: 1px solid rgba(220, 38, 38, 0.15);
+}
+
+/* ==========================================================================
+   ANIMACIONES Y RESPONSIVIDAD (DISEÑO ADAPTABLE)
+   ========================================================================== */
+@keyframes blink {
+    50% { border-color: transparent; }
+}
+
+@media (max-width: 968px) {
+    .hero-container {
+        flex-direction: column-reverse;
+        text-align: center;
+        gap: 40px;
+    }
+    .hero-content p {
+        margin: 0 auto 35px auto;
+    }
+    .hero-buttons {
+        justify-content: center;
+    }
+    .hero-content h1 {
+        font-size: 40px;
+    }
+    .profile-hex {
+        width: 260px;
+        height: 260px;
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar { padding: 20px 5%; }
+    .nav-links { display: none; } /* En una fase posterior puedes agregar el botón de menú móvil */
+    .skills-section, .projects-section { padding: 80px 5%; }
+}
+
+/* ==========================================================================
+   CARRUSEL REPARADO - CÍRCULO PERFECTO
+   ========================================================================== */
+.profile-hex {
+    position: relative;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    padding: 6px; /* Reduce un poco el borde para que no se desfase */
+    background: linear-gradient(135deg, var(--primary-color), transparent);
+    box-shadow: 0 0 40px rgba(220, 38, 38, 0.25);
+    overflow: hidden; /* Esto obliga a que TODO lo de adentro sea redondo */
+}
+
+.profile-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Centra y recorta la foto automáticamente sin deformarla */
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    z-index: 1;
+}
+
+/* Mantiene la foto activa arriba y visible */
+.profile-img.active {
+    opacity: 1;
+    z-index: 2;
+}
+
+
+/* ==========================================================================
+   ESTILOS DEL FOOTER OPTIMIZADO (REDES HORIZONTALES Y SOPORTE 4K)
+   ========================================================================== */
+.main-footer {
+    background-color: var(--card-bg);
+    padding: 60px 8% 20px 8%;
+    border-top: 2px solid rgba(220, 38, 38, 0.15);
+    margin-top: 80px;
+    width: 100%;
+}
+
+/* Contenedor limitado para que se vea perfecto en pantallas 4K */
+.footer-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 40px;
+    margin-bottom: 40px;
+    max-width: 1600px; /* Evita que se deforme en monitores gigantes */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.footer-brand p {
+    color: var(--text-muted);
+    font-size: 15px;
+    line-height: 1.6;
+    margin-top: 15px;
+    max-width: 350px;
+}
+
+.footer-social-box h4 {
+    font-size: 18px;
+    margin-bottom: 25px;
+    font-weight: 600;
+    position: relative;
+}
+
+/* Alineación horizontal perfecta para las 7 redes */
+.social-icons-horizontal {
+    display: flex;
+    flex-wrap: wrap; /* Si la pantalla es muy chica (320px), bajan ordenadamente */
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.social-icons-horizontal a {
+    color: var(--text-color);
+    background-color: rgba(255, 255, 255, 0.02);
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    border: 1px solid rgba(220, 38, 38, 0.1);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Efecto hover Crimson Tech independiente para cada icono */
+.social-icons-horizontal a:hover {
+    color: white;
+    background-color: var(--primary-color);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(220, 38, 38, 0.4);
+    border-color: var(--accent-color);
+}
+
+.footer-location {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-top: 15px;
+}
+
+.footer-location i {
+    color: var(--primary-color);
+    margin-right: 6px;
+}
+
+.footer-bottom {
+    text-align: center;
+    padding-top: 25px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.footer-bottom p {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+/* Regla extra de optimización global para pantallas ultra amplias (4K / Ultrawide) */
+@media (min-width: 2000px) {
+    .navbar, .hero-container, .skills-section, .projects-section {
+        max-width: 1600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
+/* Ajuste para teléfonos pequeños (320px) */
+@media (max-width: 768px) {
+    .footer-container {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+    .footer-brand p {
+        margin: 15px auto 0 auto;
+    }
+    .social-icons-horizontal {
+        justify-content: center;
+    }
+}
