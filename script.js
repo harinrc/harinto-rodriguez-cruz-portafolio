@@ -95,3 +95,38 @@ document.addEventListener("DOMContentLoaded", () => {
     // Si ya tenías el typingEffect, puedes llamarlo aquí o mantenerlo aparte
     startProfileCarousel();
 });
+
+// 📱 Lógica para abrir y cerrar el Menú de Hamburguesa en Móviles
+function initMobileMenu() {
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const navLinks = document.getElementById('nav-links');
+
+    if (menuBtn && navLinks) {
+        menuBtn.addEventListener('click', () => {
+            // Alterna la clase 'active' para mostrar u ocultar el menú
+            navLinks.classList.toggle('active');
+            
+            // Cambia el icono de barras por una "X" al abrirse
+            const icon = menuBtn.querySelector('i');
+            if (navLinks.classList.contains('active')) {
+                icon.className = 'fas fa-times';
+            } else {
+                icon.className = 'fas fa-bars';
+            }
+        });
+
+        // Cierra el menú automáticamente cuando el usuario hace clic en una opción (Inicio, Proyectos, etc.)
+        const links = navLinks.querySelectorAll('a');
+        links.forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+                menuBtn.querySelector('i').className = 'fas fa-bars';
+            });
+        });
+    }
+}
+
+// Inicializar al cargar el portafolio
+document.addEventListener("DOMContentLoaded", () => {
+    initMobileMenu();
+});

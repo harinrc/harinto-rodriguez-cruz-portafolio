@@ -550,3 +550,65 @@ body {
         justify-content: center;
     }
 }
+
+/* ==========================================================================
+   ESTILOS ADICIONALES PARA EL MENÚ MÓVIL (AGREGAR AL CSS GENERAL)
+   ========================================================================== */
+.mobile-menu-btn {
+    display: none; /* Oculto en computadoras */
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 24px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.mobile-menu-btn:hover {
+    color: var(--primary-color);
+}
+
+/* ==========================================================================
+   MODIFICACIÓN DE TU REGLA @media EXISTENTE PARA TELÉFONOS
+   ========================================================================== */
+@media (max-width: 768px) {
+    .navbar {
+        padding: 15px 5%;
+    }
+
+    .mobile-menu-btn {
+        display: block; /* Aparece solo en pantallas de celulares */
+    }
+
+    /* Transforma el menú horizontal en un desplegable vertical */
+    .nav-links {
+        display: none; /* Oculto por defecto */
+        flex-direction: column;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: var(--card-bg);
+        padding: 20px 0;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        border-bottom: 2px solid rgba(220, 38, 38, 0.15);
+        gap: 20px;
+        text-align: center;
+        z-index: 99;
+    }
+
+    /* Clase que añadirá JavaScript para mostrar el menú móvil */
+    .nav-links.active {
+        display: flex;
+    }
+    
+    .nav-links li {
+        width: 100%;
+    }
+    
+    .nav-links a {
+        display: block;
+        padding: 10px 0;
+        width: 100%;
+    }
+}
