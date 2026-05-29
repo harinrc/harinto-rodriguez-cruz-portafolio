@@ -132,48 +132,91 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
+
 // ==========================================================================
-// 4. CONFIGURACIÓN Y CONTROL DEL WIDGET DE CHAT INTERACTIVO
+// 1. CONFIGURACIÓN Y CONTROL DEL WIDGET DE CHAT INTERACTIVO
 // ==========================================================================
 function initChatWidget() {
+    // Captura de los elementos del DOM
     const chatBtn = document.getElementById('chat-floating-btn');
     const chatWindow = document.getElementById('chat-window');
+    const closeBtn = document.getElementById('close-chat-btn');
     const chatForm = document.getElementById('chat-contact-form');
     const chatBody = document.getElementById('chat-body');
 
-    // (Aquí mantienes la lógica del scroll y de abrir/cerrar que ya funciona al 100)
+    // Control de seguridad por si acaso no existen los ID en el HTML
+    if (!chatBtn || !chatWindow) return; 
 
+    let scrollTimeout;
+
+    // 🅰️ LÓGICA DEL SCROLL: Ocultar al deslizar y aparecer al detenerse
+    window.addEventListener('scroll', () => {
+        // Añade la clase CSS que vuelve invisible el botón
+        chatBtn.classList.add('scroll-hide');
+
+        // Limpia el temporizador mientras la pantalla se siga moviendo
+        window.clearTimeout(scrollTimeout);
+
+        // Cuando el usuario deja de deslizar por 350ms, el botón reaparece
+        scrollTimeout = setTimeout(() => {
+            chatBtn.classList.remove('scroll-hide');
+        }, 350);
+    });
+
+    // 🅱️ INTERACTIVIDAD: Abrir y Cerrar la ventana del Widget
+    chatBtn.addEventListener('click', () => {
+        // Hace el toggle de la clase 'hidden' para mostrar/ocultar el panel
+        chatWindow.classList.toggle('hidden');
+        
+        // Oculta la notificación roja (badge) una vez que se abre el chat
+        const badge = chatBtn.querySelector('.chat-badge');
+        if (badge) badge.style.display = 'none';
+    });
+
+    // Cerrar el chat desde la 'X' del encabezado
+    closeBtn.addEventListener('click', () => {
+        chatWindow.classList.add('hidden');
+    });
+
+    // 💡 ENVÍO DE DATOS DIRECTO A FIREBASE (Sintaxis Clásica v8)
     if (chatForm) {
         chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
 
+            // Capturamos lo que escribió el cliente
             const name = document.getElementById('chat-name').value;
             const contact = document.getElementById('chat-contact').value;
             const message = document.getElementById('chat-message').value;
 
-            // 🌟 LA SINTAXIS DE ÁNGELES BEAUTY (Directa y sin vueltas)
-            firebase.database().ref('mensajes_contacto').push({
-                nombre: name,
-                contacto: contact,
-                mensaje: message,
-                fecha: new Date().toLocaleString("es-NI", { timeZone: "America/Managua" })
-            })
-            .then(() => {
-                console.log("¡Mensaje enviado de una a Firebase!");
-            })
-            .catch((error) => {
-                console.error("Error:", error);
-            });
+            // Validación para asegurar que Firebase existe antes de empujar los datos
+            if (typeof firebase !== 'undefined') {
+                // Guarda la información en el nodo 'mensajes_contacto'
+                firebase.database().ref('mensajes_contacto').push({
+                    nombre: name,
+                    contacto: contact,
+                    mensaje: message,
+                    fecha: new Date().toLocaleString("es-NI", { timeZone: "America/Managua" }) // Hora de Nicaragua
+                })
+                .then(() => {
+                    console.log("¡Datos guardados con éxito en la consola de Firebase!");
+                })
+                .catch((error) => {
+                    console.error("Error directo de Firebase: ", error);
+                });
+            } else {
+                console.error("Error: Firebase no está cargado en el HTML.");
+            }
 
-            // Animación de éxito
+            // Animación y mensaje visual de éxito en la interfaz del usuario
             chatBody.innerHTML = `
                 <div style="text-align: center; padding: 40px 10px;">
                     <i class="fas fa-check-circle" style="color: #10b981; font-size: 50px; margin-bottom: 15px;"></i>
                     <h5 style="font-size: 16px; margin-bottom: 10px; color: #ffffff;">¡Mensaje Recibido!</h5>
-                    <p style="font-size: 13px; color: #a3a3a3; line-height: 1.6;">Gracias <strong>${name}</strong>, tus datos se guardaron en el servidor.</p>
+                    <p style="font-size: 13px; color: #a3a3a3; line-height: 1.6;">Gracias <strong>${name}</strong>, tus datos se guardaron en el servidor. Me pondré en contacto contigo muy pronto.</p>
                 </div>
             `;
 
+            // Auto-cerrar el panel del chat limpiamente tras 3.5 segundos
             setTimeout(() => {
                 chatWindow.classList.add('hidden');
             }, 3500);
@@ -181,6 +224,10 @@ function initChatWidget() {
     }
 }
 
+// ==========================================================================
+// 2. INICIALIZACIÓN CUANDO LA PÁGINA ESTÉ TOTALMENTE CARGADA
+// ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
     initChatWidget();
+    // Aquí abajo puedes poner las inicializaciones de tus otras funciones si las tienes
 });
