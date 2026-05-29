@@ -212,7 +212,7 @@ function initChatWidget() {
                 <div style="text-align: center; padding: 40px 10px;">
                     <i class="fas fa-check-circle" style="color: #10b981; font-size: 50px; margin-bottom: 15px;"></i>
                     <h5 style="font-size: 16px; margin-bottom: 10px; color: #ffffff;">¡Mensaje Recibido!</h5>
-                    <p style="font-size: 13px; color: #a3a3a3; line-height: 1.6;">Gracias <strong>${name}</strong>, tus datos se guardaron en el servidor. Me pondré en contacto contigo muy pronto.</p>
+                    <p style="font-size: 13px; color: #a3a3a3; line-height: 1.6;">Gracias<strong>${name}</strong>, tus datos se guardaron en el servidor. Me pondré en contacto contigo muy pronto.</p>
                 </div>
             `;
 
