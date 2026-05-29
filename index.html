@@ -142,6 +142,43 @@
 
 
     <script src="script.js"></script>
+
+    <button id="chat-floating-btn" class="chat-btn">
+    <i class="fas fa-comment-alt"></i>
+    <span class="chat-badge">1</span>
+</button>
+
+<div id="chat-window" class="chat-window hidden">
+    <div class="chat-header">
+        <div class="chat-profile">
+            <div class="profile-status online"></div>
+            <h4>Contacto Directo | HarinRC</h4>
+        </div>
+        <button id="close-chat-btn"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <div class="chat-body" id="chat-body">
+        <p class="chat-welcome">👋 ¡Hola! Deja tus datos y tu consulta. Los detalles llegarán a mi base de datos para contactarte de inmediato.</p>
+        
+        <form id="chat-contact-form">
+            <div class="chat-input-group">
+                <label><i class="fas fa-user"></i> Nombre</label>
+                <input type="text" id="chat-name" required placeholder="Tu nombre o empresa">
+            </div>
+            <div class="chat-input-group">
+                <label><i class="fas fa-envelope"></i> Correo o Teléfono</label>
+                <input type="text" id="chat-contact" required placeholder="Ej: nombre@correo.com o celular">
+            </div>
+            <div class="chat-input-group">
+                <label><i class="fas fa-code"></i> ¿En qué consiste tu proyecto?</label>
+                <textarea id="chat-message" required placeholder="Describe brevemente lo que necesitas..."></textarea>
+            </div>
+            <button type="submit" class="chat-submit-btn">Enviar al Servidor</button>
+        </form>
+    </div>
+</div>
+
+
 </body>
 <footer class="main-footer">
     <div class="footer-container">

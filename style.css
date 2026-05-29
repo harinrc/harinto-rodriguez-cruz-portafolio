@@ -612,3 +612,190 @@ body {
         width: 100%;
     }
 }
+
+
+/* ==========================================================================
+   ESTILOS DEL WIDGET DE CHAT FLOTANTE
+   ========================================================================== */
+.chat-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Efecto de ocultación inteligente al hacer scroll */
+.chat-btn.scroll-hide {
+    opacity: 0;
+    transform: translateY(30px) scale(0.7);
+    pointer-events: none;
+}
+
+.chat-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 10px 30px rgba(220, 38, 38, 0.6);
+}
+
+.chat-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background-color: #ffffff;
+    color: var(--primary-color);
+    font-size: 10px;
+    font-weight: bold;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+/* Ventana Flotante del Widget */
+.chat-window {
+    position: fixed;
+    bottom: 105px;
+    right: 30px;
+    width: 350px;
+    background-color: var(--card-bg);
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    z-index: 1001;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.075, 0.82, 0.165, 1);
+}
+
+.chat-window.hidden {
+    opacity: 0;
+    transform: translateY(40px) scale(0.95);
+    pointer-events: none;
+}
+
+.chat-header {
+    background: linear-gradient(135deg, #1e1b1b, #110f0f);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(220, 38, 38, 0.15);
+}
+
+.chat-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.profile-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.profile-status.online {
+    background-color: #10b981;
+    box-shadow: 0 0 8px #10b981;
+}
+
+.chat-header h4 {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+#close-chat-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    transition: color 0.3s;
+}
+
+#close-chat-btn:hover {
+    color: var(--primary-color);
+}
+
+.chat-body {
+    padding: 20px;
+}
+
+.chat-welcome {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+.chat-input-group {
+    margin-bottom: 12px;
+}
+
+.chat-input-group label {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 5px;
+    color: var(--text-color);
+}
+
+.chat-input-group input, .chat-input-group textarea {
+    width: 100%;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: white;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.chat-input-group input:focus, .chat-input-group textarea:focus {
+    border-color: var(--primary-color);
+}
+
+.chat-input-group textarea {
+    height: 80px;
+    resize: none;
+}
+
+.chat-submit-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+    margin-top: 5px;
+}
+
+.chat-submit-btn:hover {
+    background-color: #b91c1c;
+}
+
+/* Ajuste Responsivo para celulares pequeños (320px) */
+@media (max-width: 400px) {
+    .chat-window {
+        width: calc(100% - 40px);
+        right: 20px;
+        left: 20px;
+    }
+}
