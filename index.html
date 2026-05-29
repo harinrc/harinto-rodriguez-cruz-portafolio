@@ -213,6 +213,26 @@
     </div>
 </footer>
 
-<script type="module" src="script.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDtiou48NFV3a3pyrGSm2eOwAKZ1zmNxo0",
+    authDomain: "mi-portafolio-2bd03.firebaseapp.com",
+    databaseURL: "https://mi-portafolio-2bd03-default-rtdb.firebaseio.com",
+    projectId: "mi-portafolio-2bd03",
+    storageBucket: "mi-portafolio-2bd03.firebasestorage.app",
+    messagingSenderId: "979258790109",
+    appId: "1:123456789012:web:abcdef123456" 
+  };
+  
+  // Se inicializa globalmente, accesible por cualquier archivo
+  if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+  }
+</script>
+
+<script src="script.js"></script>
 
 </html>
