@@ -213,32 +213,6 @@
     </div>
 </footer>
 
-<script type="module">
-  // Importamos las funciones necesarias desde la web oficial de Google
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+<script type="module" src="script.js"></script>
 
- 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDtiou48NFV3a3pyrGSm2eOwAKZ1zmNxo0",
-    authDomain: "mi-portafolio-2bd03.firebaseapp.com",
-    databaseURL: "https://mi-portafolio-2bd03-default-rtdb.firebaseio.com",
-    projectId: "mi-portafolio-2bd03",
-    storageBucket: "mi-portafolio-2bd03.firebasestorage.app",
-    messagingSenderId: "979258790109",
-    appId: "1:979258790109:web:64cd48814ad0bbc0943588",
-    measurementId: "G-WE05BPDST4"
-  };
-
-  // Inicializar Firebase
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-
- 
-  window.firebaseDB = db;
-  window.firebasePush = push;
-  window.firebaseRef = ref;
-</script>
-
-<script src="script.js"></script>
 </html>

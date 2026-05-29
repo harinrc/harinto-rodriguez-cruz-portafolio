@@ -1,3 +1,29 @@
+// ==========================================================================
+// 1. IMPORTACIONES DE FIREBASE (SDK MODERNO V10)
+// ==========================================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, push } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+// ==========================================================================
+// 2. CONFIGURACIÓN DE TU PROYECTO (MI-PORTAFOLIO-2BD03)
+// ==========================================================================
+const firebaseConfig = {
+    apiKey: "AIzaSyDtiou48NFV3a3pyrGSm2eOwAKZ1zmNxo0",
+    authDomain: "mi-portafolio-2bd03.firebaseapp.com",
+    databaseURL: "https://mi-portafolio-2bd03-default-rtdb.firebaseio.com",
+    projectId: "mi-portafolio-2bd03",
+    storageBucket: "mi-portafolio-2bd03.firebasestorage.app",
+    messagingSenderId: "979258790109",
+    appId: "1:979258790109:web:64cd48814ad0bbc0943588",
+    measurementId: "G-WE05BPDST4"
+};
+
+// Inicializar las instancias de Firebase
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+
+
 // 1. Efecto de Máquina de Escribir (Typing Effect)
 const words = ["Computación y Telemática.", "Software y Sistemas.", "Redes y Conectividad."];
 let i = 0;
@@ -132,7 +158,9 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-// 💬 CONFIGURACIÓN GENERAL DEL WIDGET DE CHAT INTERACTIVO
+// ==========================================================================
+// 4. CONFIGURACIÓN Y CONTROL DEL WIDGET DE CHAT INTERACTIVO
+// ==========================================================================
 function initChatWidget() {
     const chatBtn = document.getElementById('chat-floating-btn');
     const chatWindow = document.getElementById('chat-window');
@@ -140,80 +168,81 @@ function initChatWidget() {
     const chatForm = document.getElementById('chat-contact-form');
     const chatBody = document.getElementById('chat-body');
 
+    if (!chatBtn || !chatWindow) return; // Control de seguridad
+
     let scrollTimeout;
 
-    // 1. Ocultar botón al deslizar y mostrar al detenerse
+    // A. Ocultar el botón al deslizar (Scroll) y mostrarlo al detenerse
     window.addEventListener('scroll', () => {
         chatBtn.classList.add('scroll-hide');
 
+        // Limpiar el temporizador mientras se siga detectando movimiento
         window.clearTimeout(scrollTimeout);
 
+        // Volver a mostrar el botón tras 350 milisegundos de inactividad
         scrollTimeout = setTimeout(() => {
             chatBtn.classList.remove('scroll-hide');
-        }, 350); // Se vuelve a mostrar tras 350ms de detener el scroll
+        }, 350);
     });
 
-    // 2. Abrir/Cerrar la ventana del Widget
+    // B. Abrir y Cerrar la ventana del Widget al hacer clic
     chatBtn.addEventListener('click', () => {
         chatWindow.classList.toggle('hidden');
+        
+        // Ocultar la notificación roja (badge) una vez que el usuario abre el chat
         const badge = chatBtn.querySelector('.chat-badge');
-        if (badge) badge.style.display = 'none'; // Quita la notificación al leer
+        if (badge) badge.style.display = 'none';
     });
 
     closeBtn.addEventListener('click', () => {
         chatWindow.classList.add('hidden');
     });
 
-    // 3. Envío de datos directamente a Firebase
+    // C. Captura del Formulario y Envío Directo a Firebase Realtime Database
     if (chatForm) {
-        // Busca esta sección dentro de tu script.js en el evento submit del formulario:
-chatForm.addEventListener('submit', (e) => {
-    e.preventDefault();
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
 
-    const name = document.getElementById('chat-name').value;
-    const contact = document.getElementById('chat-contact').value;
-    const message = document.getElementById('chat-message').value;
+            // Extraer los valores de los inputs
+            const name = document.getElementById('chat-name').value;
+            const contact = document.getElementById('chat-contact').value;
+            const message = document.getElementById('chat-message').value;
 
-    // Conexión modular con el puente global de Firebase
-    if (window.firebaseDB && window.firebasePush && window.firebaseRef) {
-        const db = window.firebaseDB;
-        const pushFunction = window.firebasePush;
-        const refFunction = window.firebaseRef;
+            // Enviar los datos directamente al nodo 'mensajes_contacto' usando la instancia 'db'
+            push(ref(db, 'mensajes_contacto'), {
+                nombre: name,
+                contacto: contact,
+                mensaje: message,
+                fecha: new Date().toLocaleString("es-NI", { timeZone: "America/Managua" }) // Hora oficial de Nicaragua
+            })
+            .then(() => {
+                console.log("¡Datos guardados con éxito en Firebase!");
+            })
+            .catch((error) => {
+                console.error("Error crítico al guardar en la base de datos: ", error);
+            });
 
-        // Guarda los datos en el nodo 'mensajes_contacto'
-        pushFunction(refFunction(db, 'mensajes_contacto'), {
-            nombre: name,
-            contacto: contact,
-            mensaje: message,
-            fecha: new Date().toLocaleString("es-NI", { timeZone: "America/Managua" })
-        })
-        .then(() => {
-            console.log("¡Datos guardados con éxito en la consola de Firebase!");
-        })
-        .catch((error) => {
-            console.error("Error al guardar en Firebase: ", error);
+            // Reemplazar el formulario por una animación o mensaje visual de éxito
+            chatBody.innerHTML = `
+                <div style="text-align: center; padding: 40px 10px;">
+                    <i class="fas fa-check-circle" style="color: #10b981; font-size: 50px; margin-bottom: 15px;"></i>
+                    <h5 style="font-size: 16px; margin-bottom: 10px; color: #ffffff;">¡Mensaje Recibido!</h5>
+                    <p style="font-size: 13px; color: #a3a3a3; line-height: 1.6;">Gracias <strong>${name}</strong>, tus datos se guardaron en el servidor. Me pondré en contacto contigo muy pronto.</p>
+                </div>
+            `;
+
+            // Auto-cerrar la pestaña del widget de forma limpia tras 3.5 segundos
+            setTimeout(() => {
+                chatWindow.classList.add('hidden');
+            }, 3500);
         });
-    } else {
-        console.error("Firebase no se ha inicializado correctamente en el HTML.");
-    }
-
-    // Animación de éxito en la interfaz del Widget
-    chatBody.innerHTML = `
-        <div style="text-align: center; padding: 40px 10px;">
-            <i class="fas fa-check-circle" style="color: #10b981; font-size: 50px; margin-bottom: 15px;"></i>
-            <h5 style="font-size: 16px; margin-bottom: 10px;">¡Mensaje Recibido!</h5>
-            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">Gracias ${name}, tus datos se guardaron en el servidor. Revisaré la consola de Firebase para contactarte.</p>
-        </div>
-    `;
-
-    setTimeout(() => {
-        chatWindow.classList.add('hidden');
-    }, 3500);
-});
     }
 }
 
-// Inicializar el widget cuando el DOM esté listo
+// ==========================================================================
+// 5. INICIALIZACIÓN CUANDO EL DOM ESTÉ COMPLETO
+// ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
     initChatWidget();
+    // Aquí puedes inicializar tus otras funciones si es necesario
 });
