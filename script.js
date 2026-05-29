@@ -166,43 +166,50 @@ function initChatWidget() {
 
     // 3. Envío de datos directamente a Firebase
     if (chatForm) {
-        chatForm.addEventListener('submit', (e) => {
-            e.preventDefault();
+        // Busca esta sección dentro de tu script.js en el evento submit del formulario:
+chatForm.addEventListener('submit', (e) => {
+    e.preventDefault();
 
-            const name = document.getElementById('chat-name').value;
-            const contact = document.getElementById('chat-contact').value;
-            const message = document.getElementById('chat-message').value;
+    const name = document.getElementById('chat-name').value;
+    const contact = document.getElementById('chat-contact').value;
+    const message = document.getElementById('chat-message').value;
 
-            // Enviar datos al nodo 'mensajes_contacto' en Firebase Realtime Database
-            if (typeof firebase !== 'undefined') {
-                firebase.database().ref('mensajes_contacto').push({
-                    nombre: name,
-                    contacto: contact,
-                    mensaje: message,
-                    fecha: new Date().toLocaleString("es-NI", { timeZone: "America/Managua" })
-                })
-                .then(() => {
-                    console.log("Datos enviados satisfactoriamente a Firebase.");
-                })
-                .catch((error) => {
-                    console.error("Error de Firebase: ", error);
-                });
-            }
+    // Conexión modular con el puente global de Firebase
+    if (window.firebaseDB && window.firebasePush && window.firebaseRef) {
+        const db = window.firebaseDB;
+        const pushFunction = window.firebasePush;
+        const refFunction = window.firebaseRef;
 
-            // Animación de éxito dentro del Widget
-            chatBody.innerHTML = `
-                <div style="text-align: center; padding: 40px 10px;">
-                    <i class="fas fa-check-circle" style="color: #10b981; font-size: 50px; margin-bottom: 15px;"></i>
-                    <h5 style="font-size: 16px; margin-bottom: 10px;">¡Mensaje Recibido!</h5>
-                    <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">Gracias ${name}, tus datos se guardaron en el servidor. Revisaré la consola de Firebase para contactarte.</p>
-                </div>
-            `;
-
-            // Auto cerrar el widget después de mostrar el éxito
-            setTimeout(() => {
-                chatWindow.classList.add('hidden');
-            }, 3500);
+        // Guarda los datos en el nodo 'mensajes_contacto'
+        pushFunction(refFunction(db, 'mensajes_contacto'), {
+            nombre: name,
+            contacto: contact,
+            mensaje: message,
+            fecha: new Date().toLocaleString("es-NI", { timeZone: "America/Managua" })
+        })
+        .then(() => {
+            console.log("¡Datos guardados con éxito en la consola de Firebase!");
+        })
+        .catch((error) => {
+            console.error("Error al guardar en Firebase: ", error);
         });
+    } else {
+        console.error("Firebase no se ha inicializado correctamente en el HTML.");
+    }
+
+    // Animación de éxito en la interfaz del Widget
+    chatBody.innerHTML = `
+        <div style="text-align: center; padding: 40px 10px;">
+            <i class="fas fa-check-circle" style="color: #10b981; font-size: 50px; margin-bottom: 15px;"></i>
+            <h5 style="font-size: 16px; margin-bottom: 10px;">¡Mensaje Recibido!</h5>
+            <p style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">Gracias ${name}, tus datos se guardaron en el servidor. Revisaré la consola de Firebase para contactarte.</p>
+        </div>
+    `;
+
+    setTimeout(() => {
+        chatWindow.classList.add('hidden');
+    }, 3500);
+});
     }
 }
 
