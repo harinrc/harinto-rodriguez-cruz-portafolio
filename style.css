@@ -799,3 +799,54 @@ body {
         left: 20px;
     }
 }
+
+/* ==========================================================================
+   AJUSTES DINÁMICOS PARA MODO CLARO / OSCURO EN EL WIDGET
+   ========================================================================== */
+
+/* 1. Forzar que la ventana use el fondo dinámico de tus tarjetas */
+.chat-window {
+    background-color: var(--card-bg) !important;
+    /* Cambiamos el borde para que no sea tan chillón en modo claro */
+    border: 1px solid rgba(220, 38, 38, 0.15);
+}
+
+/* 2. El encabezado del chat debe contrastar bien en ambos modos */
+.chat-header {
+    /* Usamos un degradado sutil basado en el fondo de tus tarjetas */
+    background: linear-gradient(135deg, var(--card-bg), rgba(220, 38, 38, 0.05)) !important;
+    border-bottom: 1px solid rgba(220, 38, 38, 0.15);
+}
+
+/* Asegurar que el título del encabezado cambie de color según el tema */
+.chat-header h4 {
+    color: var(--text-color) !important;
+}
+
+/* 3. Ajustar las etiquetas (Labels) del formulario para que cambien de color */
+.chat-input-group label {
+    color: var(--text-color) !important;
+    font-weight: 500;
+}
+
+/* 4. Ajustar los campos de entrada (Inputs y Textarea) */
+.chat-input-group input, 
+.chat-input-group textarea {
+    /* Fondo que se adapte sutilmente */
+    background-color: rgba(128, 128, 128, 0.05) !important;
+    /* El texto que escribe el usuario debe heredar el color del tema actual */
+    color: var(--text-color) !important;
+    border: 1px solid rgba(128, 128, 128, 0.2) !important;
+}
+
+/* Asegurar que el texto de marcador (Placeholder) sea legible pero sutil */
+.chat-input-group input::placeholder,
+.chat-input-group textarea::placeholder {
+    color: var(--text-muted) !important;
+    opacity: 0.7;
+}
+
+/* 5. El texto de bienvenida del cuerpo del chat */
+.chat-welcome {
+    color: var(--text-muted) !important;
+}
