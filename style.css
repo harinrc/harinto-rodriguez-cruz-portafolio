@@ -728,6 +728,23 @@ body::before {
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 
+/* Fondo difuminado al abrir el formulario */
+body.chat-open::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: rgba(7, 17, 31, 0.35);
+    backdrop-filter: blur(6px);
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+}
+
+body.chat-open::before {
+    opacity: 1;
+}
+
 /* Ventana Flotante del Widget */
 .chat-window {
     position: fixed;
@@ -740,7 +757,9 @@ body::before {
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
     z-index: 1001;
     overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.075, 0.82, 0.165, 1);
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .chat-window.hidden {

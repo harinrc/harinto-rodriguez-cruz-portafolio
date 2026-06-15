@@ -165,17 +165,19 @@ function initChatWidget() {
 
     // 🅱️ INTERACTIVIDAD: Abrir y Cerrar la ventana del Widget
     chatBtn.addEventListener('click', () => {
-        // Hace el toggle de la clase 'hidden' para mostrar/ocultar el panel
-        chatWindow.classList.toggle('hidden');
-        
-        // Oculta la notificación roja (badge) una vez que se abre el chat
+        const isHidden = chatWindow.classList.toggle('hidden');
+        document.body.classList.toggle('chat-open', !isHidden);
+
         const badge = chatBtn.querySelector('.chat-badge');
-        if (badge) badge.style.display = 'none';
+        if (badge) badge.style.display = !isHidden ? 'none' : 'flex';
     });
 
     // Cerrar el chat desde la 'X' del encabezado
     closeBtn.addEventListener('click', () => {
         chatWindow.classList.add('hidden');
+        document.body.classList.remove('chat-open');
+        const badge = chatBtn.querySelector('.chat-badge');
+        if (badge) badge.style.display = 'flex';
     });
 
     // 💡 ENVÍO DE DATOS DIRECTO A FIREBASE (Sintaxis Clásica v8)
