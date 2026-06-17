@@ -247,7 +247,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let currentIndex = 0;
     let autoScrollTimer;
+    let resumeTimer;
     let isPaused = false;
+    let isUserInteracting = false;
 
     const scrollToCard = (index) => {
         const targetCard = galleryCards[index];
@@ -259,14 +261,32 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
+    const getClosestCardIndex = () => {
+        const carouselCenter = galleryCarousel.scrollLeft + (galleryCarousel.clientWidth / 2);
+        let closestIndex = 0;
+        let closestDistance = Infinity;
+
+        galleryCards.forEach((card, index) => {
+            const cardCenter = card.offsetLeft + (card.offsetWidth / 2);
+            const distance = Math.abs(cardCenter - carouselCenter);
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestIndex = index;
+            }
+        });
+
+        return closestIndex;
+    };
+
     const startAutoScroll = () => {
         stopAutoScroll();
         autoScrollTimer = setInterval(() => {
-            if (isPaused) return;
+            if (isPaused || isUserInteracting) return;
 
             currentIndex = (currentIndex + 1) % galleryCards.length;
             scrollToCard(currentIndex);
-        }, 4200);
+        }, 5200);
     };
 
     const stopAutoScroll = () => {
@@ -275,28 +295,61 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    galleryCarousel.addEventListener('mouseenter', () => {
+    const pauseAutoScroll = () => {
         isPaused = true;
+        window.clearTimeout(resumeTimer);
+    };
+
+    const resumeAutoScroll = () => {
+        window.clearTimeout(resumeTimer);
+        resumeTimer = setTimeout(() => {
+            isPaused = false;
+            currentIndex = getClosestCardIndex();
+            startAutoScroll();
+        }, 1200);
+    };
+
+    galleryCarousel.addEventListener('pointerdown', () => {
+        isUserInteracting = true;
+        pauseAutoScroll();
+    });
+
+    window.addEventListener('pointerup', () => {
+        if (!isUserInteracting) return;
+        isUserInteracting = false;
+        resumeAutoScroll();
+    });
+
+    galleryCarousel.addEventListener('scroll', () => {
+        if (isUserInteracting) return;
+        pauseAutoScroll();
+        resumeAutoScroll();
+    });
+
+    galleryCarousel.addEventListener('mouseenter', () => {
+        pauseAutoScroll();
     });
 
     galleryCarousel.addEventListener('mouseleave', () => {
-        isPaused = false;
+        resumeAutoScroll();
     });
 
     galleryCarousel.addEventListener('touchstart', () => {
-        isPaused = true;
+        isUserInteracting = true;
+        pauseAutoScroll();
     }, { passive: true });
 
     galleryCarousel.addEventListener('touchend', () => {
-        isPaused = false;
+        isUserInteracting = false;
+        resumeAutoScroll();
     }, { passive: true });
 
     galleryCarousel.addEventListener('focusin', () => {
-        isPaused = true;
+        pauseAutoScroll();
     });
 
     galleryCarousel.addEventListener('focusout', () => {
-        isPaused = false;
+        resumeAutoScroll();
     });
 
     startAutoScroll();
