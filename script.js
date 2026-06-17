@@ -233,3 +233,71 @@ document.addEventListener("DOMContentLoaded", () => {
     initChatWidget();
     // Aquí abajo puedes poner las inicializaciones de tus otras funciones si las tienes
 });
+
+// ==========================================================================
+// 3. CARRUSEL SUAVE DE GALERÍA
+// ==========================================================================
+document.addEventListener("DOMContentLoaded", () => {
+    const galleryCarousel = document.querySelector('.gallery-carousel');
+
+    if (!galleryCarousel) return;
+
+    const galleryCards = Array.from(galleryCarousel.querySelectorAll('.gallery-link'));
+    if (galleryCards.length < 2) return;
+
+    let currentIndex = 0;
+    let autoScrollTimer;
+    let isPaused = false;
+
+    const scrollToCard = (index) => {
+        const targetCard = galleryCards[index];
+        if (!targetCard) return;
+
+        galleryCarousel.scrollTo({
+            left: targetCard.offsetLeft - galleryCarousel.offsetLeft,
+            behavior: 'smooth'
+        });
+    };
+
+    const startAutoScroll = () => {
+        stopAutoScroll();
+        autoScrollTimer = setInterval(() => {
+            if (isPaused) return;
+
+            currentIndex = (currentIndex + 1) % galleryCards.length;
+            scrollToCard(currentIndex);
+        }, 4200);
+    };
+
+    const stopAutoScroll = () => {
+        if (autoScrollTimer) {
+            clearInterval(autoScrollTimer);
+        }
+    };
+
+    galleryCarousel.addEventListener('mouseenter', () => {
+        isPaused = true;
+    });
+
+    galleryCarousel.addEventListener('mouseleave', () => {
+        isPaused = false;
+    });
+
+    galleryCarousel.addEventListener('touchstart', () => {
+        isPaused = true;
+    }, { passive: true });
+
+    galleryCarousel.addEventListener('touchend', () => {
+        isPaused = false;
+    }, { passive: true });
+
+    galleryCarousel.addEventListener('focusin', () => {
+        isPaused = true;
+    });
+
+    galleryCarousel.addEventListener('focusout', () => {
+        isPaused = false;
+    });
+
+    startAutoScroll();
+});
