@@ -97,16 +97,80 @@ function startProjectImageCarousels() {
     galleries.forEach((gallery) => {
         const slides = gallery.querySelectorAll('.project-slide');
         let currentIndex = 0;
+        let autoplayTimer;
+        let resumeTimer;
+        let isPaused = false;
 
         if (slides.length <= 1) return;
 
         const slideInterval = Number(gallery.dataset.slideInterval) || 3000;
+        const dotsWrapper = document.createElement('div');
+        dotsWrapper.className = 'project-dots';
+        dotsWrapper.setAttribute('aria-label', 'Indicadores de imágenes del proyecto');
 
-        setInterval(() => {
+        const dots = Array.from(slides, (_, index) => {
+            const dot = document.createElement('button');
+            dot.type = 'button';
+            dot.className = `project-dot${index === 0 ? ' active' : ''}`;
+            dot.setAttribute('aria-label', `Ver imagen ${index + 1}`);
+
+            dot.addEventListener('click', () => {
+                goToSlide(index);
+                pauseAutoplay();
+                resumeAutoplay();
+            });
+
+            dotsWrapper.appendChild(dot);
+            return dot;
+        });
+
+        gallery.appendChild(dotsWrapper);
+
+        const goToSlide = (nextIndex) => {
             slides[currentIndex].classList.remove('active');
-            currentIndex = (currentIndex + 1) % slides.length;
+            dots[currentIndex].classList.remove('active');
+
+            currentIndex = nextIndex;
+
             slides[currentIndex].classList.add('active');
-        }, slideInterval);
+            dots[currentIndex].classList.add('active');
+        };
+
+        const startAutoplay = () => {
+            stopAutoplay();
+            autoplayTimer = setInterval(() => {
+                if (isPaused) return;
+                const nextIndex = (currentIndex + 1) % slides.length;
+                goToSlide(nextIndex);
+            }, slideInterval);
+        };
+
+        const stopAutoplay = () => {
+            if (autoplayTimer) {
+                clearInterval(autoplayTimer);
+            }
+        };
+
+        const pauseAutoplay = () => {
+            isPaused = true;
+            window.clearTimeout(resumeTimer);
+        };
+
+        const resumeAutoplay = () => {
+            window.clearTimeout(resumeTimer);
+            resumeTimer = setTimeout(() => {
+                isPaused = false;
+            }, 900);
+        };
+
+        gallery.addEventListener('mouseenter', pauseAutoplay);
+        gallery.addEventListener('mouseleave', resumeAutoplay);
+        gallery.addEventListener('focusin', pauseAutoplay);
+        gallery.addEventListener('focusout', resumeAutoplay);
+        gallery.addEventListener('touchstart', pauseAutoplay, { passive: true });
+        gallery.addEventListener('touchend', resumeAutoplay, { passive: true });
+
+        startAutoplay();
     });
 }
 
