@@ -503,6 +503,10 @@ body::after {
     opacity: 1;
 }
 
+.project-gallery {
+    touch-action: pan-y;
+}
+
 .project-dots {
     position: absolute;
     left: 50%;

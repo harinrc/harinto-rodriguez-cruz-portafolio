@@ -100,6 +100,11 @@ function startProjectImageCarousels() {
         let autoplayTimer;
         let resumeTimer;
         let isPaused = false;
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchCurrentY = 0;
+        let isSwiping = false;
 
         if (slides.length <= 1) return;
 
@@ -163,12 +168,70 @@ function startProjectImageCarousels() {
             }, 900);
         };
 
+        const goToNextSlide = () => {
+            const nextIndex = (currentIndex + 1) % slides.length;
+            goToSlide(nextIndex);
+        };
+
+        const goToPrevSlide = () => {
+            const prevIndex = (currentIndex - 1 + slides.length) % slides.length;
+            goToSlide(prevIndex);
+        };
+
+        const handleSwipe = () => {
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = Math.abs(touchStartY - touchCurrentY);
+            const swipeThreshold = 35;
+
+            if (Math.abs(deltaX) < swipeThreshold || deltaY > 70) {
+                return;
+            }
+
+            if (deltaX < 0) {
+                goToNextSlide();
+            } else {
+                goToPrevSlide();
+            }
+        };
+
         gallery.addEventListener('mouseenter', pauseAutoplay);
         gallery.addEventListener('mouseleave', resumeAutoplay);
         gallery.addEventListener('focusin', pauseAutoplay);
         gallery.addEventListener('focusout', resumeAutoplay);
-        gallery.addEventListener('touchstart', pauseAutoplay, { passive: true });
-        gallery.addEventListener('touchend', resumeAutoplay, { passive: true });
+
+        gallery.addEventListener('touchstart', (event) => {
+            const touch = event.changedTouches[0];
+            touchStartX = touch.clientX;
+            touchEndX = touch.clientX;
+            touchStartY = touch.clientY;
+            touchCurrentY = touch.clientY;
+            isSwiping = true;
+            pauseAutoplay();
+        }, { passive: true });
+
+        gallery.addEventListener('touchmove', (event) => {
+            if (!isSwiping) return;
+            const touch = event.changedTouches[0];
+            touchEndX = touch.clientX;
+            touchCurrentY = touch.clientY;
+        }, { passive: true });
+
+        gallery.addEventListener('touchend', (event) => {
+            if (!isSwiping) return;
+
+            const touch = event.changedTouches[0];
+            touchEndX = touch.clientX;
+            touchCurrentY = touch.clientY;
+
+            handleSwipe();
+            isSwiping = false;
+            resumeAutoplay();
+        }, { passive: true });
+
+        gallery.addEventListener('touchcancel', () => {
+            isSwiping = false;
+            resumeAutoplay();
+        }, { passive: true });
 
         startAutoplay();
     });
