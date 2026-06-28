@@ -90,10 +90,31 @@ function startProfileCarousel() {
     }, 4000); // Cambia la foto cada 4 segundos (puedes ajustar este tiempo)
 }
 
+// 4. Mini carruseles por proyecto (desvanecimiento cada 3 segundos)
+function startProjectImageCarousels() {
+    const galleries = document.querySelectorAll('.project-img.project-gallery');
+
+    galleries.forEach((gallery) => {
+        const slides = gallery.querySelectorAll('.project-slide');
+        let currentIndex = 0;
+
+        if (slides.length <= 1) return;
+
+        const slideInterval = Number(gallery.dataset.slideInterval) || 3000;
+
+        setInterval(() => {
+            slides[currentIndex].classList.remove('active');
+            currentIndex = (currentIndex + 1) % slides.length;
+            slides[currentIndex].classList.add('active');
+        }, slideInterval);
+    });
+}
+
 // Asegurar que el carrusel inicie al cargar el documento
 document.addEventListener("DOMContentLoaded", () => {
     // Si ya tenías el typingEffect, puedes llamarlo aquí o mantenerlo aparte
     startProfileCarousel();
+    startProjectImageCarousels();
 });
 
 // 📱 Lógica para abrir y cerrar el Menú de Hamburguesa en Móviles
