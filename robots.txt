@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/sitemap.xml

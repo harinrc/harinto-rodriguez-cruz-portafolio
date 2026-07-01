@@ -1,9 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-   <url>
-      <loc>https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/</loc>
-      <lastmod>2026-05-24</lastmod>
-      <changefreq>monthly</changefreq>
-      <priority>1.0</priority>
-   </url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/</loc>
+    <lastmod>2026-06-30</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+
+    <image:image><image:loc>https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/yo.jpeg</image:loc><image:title>Foto personal de Harinto Rodriguez Cruz</image:title></image:image>
+    <image:image><image:loc>https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/yo3.jpeg</image:loc><image:title>Foto de Harinto Rodriguez Cruz en entorno universitario</image:title></image:image>
+    <image:image><image:loc>https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/yo4.jpeg</image:loc><image:title>Foto de perfil de Harinto Rodriguez Cruz</image:title></image:image>
+    <image:image><image:loc>https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/yo5.jpeg</image:loc><image:title>Vista previa del portafolio de Harinto Rodriguez Cruz</image:title></image:image>
+    <image:image><image:loc>https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/portada.jpeg</image:loc><image:title>Imagen de portada del portafolio</image:title></image:image>
+    <image:image><image:loc>https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/angelesbeauty.jpeg</image:loc><image:title>Captura del proyecto Angeles Beauty</image:title></image:image>
+    <image:image><image:loc>https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/laberinto.jpeg</image:loc><image:title>Captura del proyecto Laberinto RGB</image:title></image:image>
+    <image:image><image:loc>https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/hardware.jpeg</image:loc><image:title>Proyecto de hardware y diagnostico de sistema</image:title></image:image>
+    <image:image><image:loc>https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/Tresenrayaportada2.jpeg</image:loc><image:title>Captura adicional del proyecto Tres en Raya</image:title></image:image>
+    <image:image><image:loc>https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/pwainstalable.jpeg</image:loc><image:title>Captura del proyecto Velocimetro PWA</image:title></image:image>
+    <image:image><image:loc>https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/velocimetrofirstportada.jpeg</image:loc><image:title>Imagen principal del proyecto Velocimetro PWA</image:title></image:image>
+  </url>
 </urlset>
