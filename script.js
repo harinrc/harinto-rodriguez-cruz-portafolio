@@ -3,11 +3,210 @@ const words = ["Computación y Telemática.", "Software y Sistemas.", "Redes y C
 let i = 0;
 let timer;
 
+function initPcbBackground() {
+    const canvas = document.getElementById('pcb-background');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let tracks = [];
+    let pulses = [];
+    let animationFrameId;
+    const totalTracks = 45;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const getThemeColor = (name) => {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    };
+
+    const resizeCanvas = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        generateHardware();
+        renderFrame();
+    };
+
+    function generateHardware() {
+        tracks = [];
+        pulses = [];
+
+        for (let trackIndex = 0; trackIndex < totalTracks; trackIndex++) {
+            const points = [];
+            let currentX = Math.random() * canvas.width;
+            let currentY = Math.random() * canvas.height;
+            points.push({ x: currentX, y: currentY });
+
+            const segments = Math.floor(Math.random() * 3) + 3;
+            let currentAngle = (Math.floor(Math.random() * 8) * Math.PI) / 4;
+
+            for (let segmentIndex = 0; segmentIndex < segments; segmentIndex++) {
+                const length = Math.random() * 200 + 80;
+                currentX += Math.cos(currentAngle) * length;
+                currentY += Math.sin(currentAngle) * length;
+                points.push({ x: currentX, y: currentY });
+
+                const angleOptions = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];
+                currentAngle += angleOptions[Math.floor(Math.random() * angleOptions.length)];
+            }
+
+            tracks.push(points);
+
+            if (Math.random() > 0.2) {
+                pulses.push({
+                    trackIndex,
+                    segment: 0,
+                    progress: 0,
+                    speed: Math.random() * 0.003 + 0.002,
+                    size: Math.random() * 2 + 1.5
+                });
+            }
+        }
+    }
+
+    const drawTrack = (track, colors) => {
+        ctx.beginPath();
+        ctx.moveTo(track[0].x + 2, track[0].y + 2);
+        for (let pointIndex = 1; pointIndex < track.length; pointIndex++) {
+            ctx.lineTo(track[pointIndex].x + 2, track[pointIndex].y + 2);
+        }
+        ctx.strokeStyle = colors.trackShadow;
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(track[0].x, track[0].y);
+        for (let pointIndex = 1; pointIndex < track.length; pointIndex++) {
+            ctx.lineTo(track[pointIndex].x, track[pointIndex].y);
+        }
+        ctx.strokeStyle = colors.track;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        const start = track[0];
+        const end = track[track.length - 1];
+
+        [start, end].forEach((position) => {
+            ctx.beginPath();
+            ctx.arc(position.x + 1, position.y + 1, 4.5, 0, Math.PI * 2);
+            ctx.fillStyle = colors.trackShadow;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(position.x, position.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = colors.node;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(position.x, position.y, 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = colors.hole;
+            ctx.fill();
+        });
+    };
+
+    const drawPulse = (pulse, colors) => {
+        const track = tracks[pulse.trackIndex];
+        if (!track || pulse.segment >= track.length - 1) return;
+
+        const pointA = track[pulse.segment];
+        const pointB = track[pulse.segment + 1];
+        const x = pointA.x + (pointB.x - pointA.x) * pulse.progress;
+        const y = pointA.y + (pointB.y - pointA.y) * pulse.progress;
+
+        ctx.beginPath();
+        ctx.arc(x, y, pulse.size + 6, 0, Math.PI * 2);
+        ctx.fillStyle = colors.pulseGlow;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(x, y, pulse.size + 2, 0, Math.PI * 2);
+        ctx.fillStyle = colors.pulseCore;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(x, y, pulse.size, 0, Math.PI * 2);
+        ctx.fillStyle = colors.pulseHot;
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = colors.pulseCore;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        pulse.progress += pulse.speed;
+        if (pulse.progress >= 1) {
+            pulse.progress = 0;
+            pulse.segment += 1;
+            if (pulse.segment >= track.length - 1) {
+                pulse.segment = 0;
+                pulse.speed = Math.random() * 0.003 + 0.002;
+            }
+        }
+    };
+
+    function renderFrame() {
+        const colors = {
+            base: getThemeColor('--pcb-base'),
+            trackShadow: getThemeColor('--pcb-track-shadow'),
+            track: getThemeColor('--pcb-track'),
+            node: getThemeColor('--pcb-node'),
+            hole: getThemeColor('--pcb-hole'),
+            pulseGlow: getThemeColor('--pcb-pulse-glow'),
+            pulseCore: getThemeColor('--pcb-pulse-core'),
+            pulseHot: getThemeColor('--pcb-pulse-hot')
+        };
+
+        ctx.fillStyle = colors.base;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        tracks.forEach((track) => drawTrack(track, colors));
+
+        if (!prefersReducedMotion.matches) {
+            pulses.forEach((pulse) => drawPulse(pulse, colors));
+        }
+    }
+
+    const animate = () => {
+        renderFrame();
+        if (!prefersReducedMotion.matches) {
+            animationFrameId = window.requestAnimationFrame(animate);
+        }
+    };
+
+    const restartAnimation = () => {
+        if (animationFrameId) {
+            window.cancelAnimationFrame(animationFrameId);
+        }
+        renderFrame();
+        if (!prefersReducedMotion.matches) {
+            animationFrameId = window.requestAnimationFrame(animate);
+        }
+    };
+
+    window.addEventListener('resize', resizeCanvas);
+    prefersReducedMotion.addEventListener('change', restartAnimation);
+
+    const themeObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            if (mutation.attributeName === 'data-theme') {
+                renderFrame();
+                break;
+            }
+        }
+    });
+
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    resizeCanvas();
+    restartAnimation();
+}
+
 function typingEffect() {
+    const typingTarget = document.getElementById('typing-text');
+    if (!typingTarget) return;
+
     let word = words[i].split("");
     var loopTyping = function() {
         if (word.length > 0) {
-            document.getElementById('typing-text').innerHTML += word.shift();
+            typingTarget.innerHTML += word.shift();
         } else {
             setTimeout(deletingEffect, 2000); // Tiempo que se queda la palabra escrita
             return false;
@@ -18,11 +217,14 @@ function typingEffect() {
 }
 
 function deletingEffect() {
+    const typingTarget = document.getElementById('typing-text');
+    if (!typingTarget) return;
+
     let word = words[i].split("");
     var loopDeleting = function() {
         if (word.length > 0) {
             word.pop();
-            document.getElementById('typing-text').innerHTML = word.join("");
+            typingTarget.innerHTML = word.join("");
         } else {
             if (words.length > (i + 1)) {
                 i++;
@@ -38,36 +240,41 @@ function deletingEffect() {
 }
 
 // Iniciar el efecto cuando cargue la página
-document.addEventListener("DOMContentLoaded", typingEffect);
+document.addEventListener("DOMContentLoaded", () => {
+    initPcbBackground();
+    typingEffect();
+});
 
 
 // 2. Control del Modo Oscuro (Dark Mode)
-const themeToggleBtn = document.getElementById('theme-toggle');
-const themeIcon = themeToggleBtn.querySelector('i');
+function initThemeToggle() {
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const themeIcon = themeToggleBtn?.querySelector('i');
 
-// Verificar si el usuario ya tenía una preferencia guardada
-const currentTheme = localStorage.getItem('theme');
-if (currentTheme) {
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    if (currentTheme === 'dark') {
-        themeIcon.classList.replace('fa-moon', 'fa-sun');
+    if (!themeToggleBtn || !themeIcon) return;
+
+    const currentTheme = localStorage.getItem('theme');
+    if (currentTheme) {
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        if (currentTheme === 'dark') {
+            themeIcon.classList.replace('fa-moon', 'fa-sun');
+        }
     }
+
+    themeToggleBtn.addEventListener('click', () => {
+        let theme = document.documentElement.getAttribute('data-theme');
+
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'light');
+            localStorage.setItem('theme', 'light');
+            themeIcon.classList.replace('fa-sun', 'fa-moon');
+        } else {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            localStorage.setItem('theme', 'dark');
+            themeIcon.classList.replace('fa-moon', 'fa-sun');
+        }
+    });
 }
-
-// Escuchar el clic en el botón de cambiar tema
-themeToggleBtn.addEventListener('click', () => {
-    let theme = document.documentElement.getAttribute('data-theme');
-    
-    if (theme === 'dark') {
-        document.documentElement.setAttribute('data-theme', 'light');
-        localStorage.setItem('theme', 'light');
-        themeIcon.classList.replace('fa-sun', 'fa-moon');
-    } else {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        localStorage.setItem('theme', 'dark');
-        themeIcon.classList.replace('fa-moon', 'fa-sun');
-    }
-});
 
 
 // 3. Carrusel Automático con Efecto Desvanecido para Foto de Perfil
@@ -240,6 +447,7 @@ function startProjectImageCarousels() {
 // Asegurar que el carrusel inicie al cargar el documento
 document.addEventListener("DOMContentLoaded", () => {
     // Si ya tenías el typingEffect, puedes llamarlo aquí o mantenerlo aparte
+    initThemeToggle();
     startProfileCarousel();
     startProjectImageCarousels();
 });
