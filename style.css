@@ -6,12 +6,12 @@
     --bg-gradient: linear-gradient(180deg, rgba(7, 17, 31, 0.92) 0%, rgba(15, 23, 42, 0.84) 45%, rgba(17, 24, 39, 0.90) 100%);
     --text-color: #f8fafc;
     --text-muted: #cbd5e1;
-    --card-bg: rgba(15, 23, 42, 0.86);
-    --card-gradient-start: rgba(15, 23, 42, 0.96);
-    --card-gradient-end: rgba(17, 24, 39, 0.98);
+    --card-bg: rgba(15, 23, 42, 0.80);
+    --card-gradient-start: rgba(15, 23, 42, 0.90);
+    --card-gradient-end: rgba(17, 24, 39, 0.93);
     --primary-color: #dc2626;
     --accent-color: #f87171;
-    --border-color: rgba(248, 113, 113, 0.14);
+    --border-color: rgba(248, 113, 113, 0.11);
     --grid-color: rgba(255, 255, 255, 0.04);
     --grid-accent: rgba(220, 38, 38, 0.08);
     --card-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
@@ -301,7 +301,7 @@ body::after {
 }
 
 .gallery-carousel::-webkit-scrollbar-thumb {
-    background: rgba(220, 38, 38, 0.34);
+    background: rgba(220, 38, 38, 0.26);
     border-radius: 999px;
 }
 
@@ -317,14 +317,14 @@ body::after {
 
 .gallery-card:hover {
     transform: translateY(-6px);
-    border-color: rgba(220, 38, 38, 0.28);
-    box-shadow: 0 18px 34px rgba(220, 38, 38, 0.16);
+    border-color: rgba(220, 38, 38, 0.22);
+    box-shadow: 0 16px 30px rgba(220, 38, 38, 0.12);
 }
 
 .gallery-link:hover .gallery-card,
 .gallery-link:focus-visible .gallery-card {
-    border-color: rgba(220, 38, 38, 0.32);
-    box-shadow: 0 18px 34px rgba(220, 38, 38, 0.2);
+    border-color: rgba(220, 38, 38, 0.24);
+    box-shadow: 0 16px 30px rgba(220, 38, 38, 0.14);
 }
 
 .gallery-link:focus-visible {
@@ -467,8 +467,8 @@ body::after {
 
 .skill-card:hover, .project-card:hover {
     transform: translateY(-10px);
-    box-shadow: 0 20px 40px rgba(220, 38, 38, 0.15);
-    border-color: rgba(220, 38, 38, 0.3);
+    box-shadow: 0 18px 34px rgba(220, 38, 38, 0.11);
+    border-color: rgba(220, 38, 38, 0.22);
 }
 
 .skill-icon {
@@ -567,7 +567,7 @@ body::after {
 
 .project-img {
     height: 180px;
-    background: linear-gradient(135deg, rgba(220, 38, 38, 0.12), var(--card-bg) 70%);
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.08), var(--card-bg) 72%);
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -588,7 +588,7 @@ body::after {
     left: -100%;
     width: 50%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.1), transparent);
+    background: linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.07), transparent);
     transition: 0.6s;
     z-index: 3;
     pointer-events: none;
@@ -613,14 +613,14 @@ body::after {
 }
 
 .tags span {
-    background-color: rgba(220, 38, 38, 0.1);
+    background-color: rgba(220, 38, 38, 0.07);
     color: #f87171;
     padding: 6px 14px;
     border-radius: 6px;
     font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.3px;
-    border: 1px solid rgba(220, 38, 38, 0.15);
+    border: 1px solid rgba(220, 38, 38, 0.12);
 }
 
 /* ==========================================================================
