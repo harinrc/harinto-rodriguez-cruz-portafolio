@@ -246,34 +246,10 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-// 2. Control del Modo Oscuro (Dark Mode)
-function initThemeToggle() {
-    const themeToggleBtn = document.getElementById('theme-toggle');
-    const themeIcon = themeToggleBtn?.querySelector('i');
-
-    if (!themeToggleBtn || !themeIcon) return;
-
-    const currentTheme = localStorage.getItem('theme');
-    if (currentTheme) {
-        document.documentElement.setAttribute('data-theme', currentTheme);
-        if (currentTheme === 'dark') {
-            themeIcon.classList.replace('fa-moon', 'fa-sun');
-        }
-    }
-
-    themeToggleBtn.addEventListener('click', () => {
-        let theme = document.documentElement.getAttribute('data-theme');
-
-        if (theme === 'dark') {
-            document.documentElement.setAttribute('data-theme', 'light');
-            localStorage.setItem('theme', 'light');
-            themeIcon.classList.replace('fa-sun', 'fa-moon');
-        } else {
-            document.documentElement.setAttribute('data-theme', 'dark');
-            localStorage.setItem('theme', 'dark');
-            themeIcon.classList.replace('fa-moon', 'fa-sun');
-        }
-    });
+// 2. Tema fijo en modo oscuro
+function enforceDarkTheme() {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('theme', 'dark');
 }
 
 
@@ -469,7 +445,7 @@ function startProjectImageCarousels() {
 // Asegurar que el carrusel inicie al cargar el documento
 document.addEventListener("DOMContentLoaded", () => {
     // Si ya tenías el typingEffect, puedes llamarlo aquí o mantenerlo aparte
-    initThemeToggle();
+    enforceDarkTheme();
     initHeroBackgroundSlider();
     startProfileCarousel();
     startProjectImageCarousels();
