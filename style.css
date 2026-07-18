@@ -512,6 +512,11 @@ body::after {
     display: block;
 }
 
+.project-gallery .project-thumb {
+    object-fit: contain;
+    background: rgba(2, 6, 23, 0.72);
+}
+
 .project-gallery .project-slide {
     position: absolute;
     inset: 0;
@@ -566,7 +571,7 @@ body::after {
 }
 
 .project-img {
-    height: 180px;
+    height: clamp(180px, 24vw, 240px);
     background: linear-gradient(135deg, rgba(220, 38, 38, 0.08), var(--card-bg) 72%);
     border-radius: 10px;
     display: flex;
@@ -578,6 +583,12 @@ body::after {
     border: 1px solid rgba(255, 255, 255, 0.05);
     position: relative;
     overflow: hidden;
+}
+
+.project-img.project-gallery {
+    height: auto;
+    min-height: 180px;
+    aspect-ratio: 16 / 9;
 }
 
 /* Efecto decorativo interno para las imágenes de los proyectos */
@@ -690,6 +701,83 @@ body::after {
     .skills-section, .projects-section { padding: 72px 5% 44px; }
     .section-title { font-size: 1.9rem; margin-bottom: 40px; }
     .hero-section { min-height: auto; padding-top: 40px; }
+    .skills-container,
+    .projects-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    .skill-card,
+    .project-card {
+        padding: 22px;
+    }
+    .project-info p {
+        min-height: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-section {
+        padding: 34px 5% 24px;
+    }
+
+    .profile-hex {
+        width: min(280px, 86vw);
+        height: auto;
+    }
+
+    .hero-content h1 {
+        font-size: clamp(1.9rem, 10vw, 2.4rem);
+        line-height: 1.1;
+    }
+
+    .hero-content p {
+        font-size: 0.98rem;
+        line-height: 1.55;
+    }
+
+    .hero-buttons {
+        gap: 12px;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .gallery-carousel {
+        grid-auto-columns: minmax(180px, 84vw);
+    }
+
+    .skill-card,
+    .project-card {
+        padding: 18px;
+        border-radius: 20px;
+    }
+
+    .project-img.project-gallery {
+        min-height: 160px;
+        aspect-ratio: 4 / 3;
+    }
+
+    .project-link {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .section-title {
+        font-size: 1.72rem;
+    }
+
+    .hero-badge {
+        font-size: 11px;
+        letter-spacing: 0.06em;
+        padding: 7px 10px;
+    }
+
+    .tags span {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
 }
 
 /* ==========================================================================
