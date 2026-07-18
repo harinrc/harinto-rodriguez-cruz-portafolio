@@ -297,7 +297,29 @@ function startProfileCarousel() {
     }, 4000); // Cambia la foto cada 4 segundos (puedes ajustar este tiempo)
 }
 
-// 4. Mini carruseles por proyecto (desvanecimiento cada 3 segundos)
+// 4. Portadas dinámicas en Hero con desvanecido cada 10s
+function initHeroBackgroundSlider() {
+    const slides = document.querySelectorAll('.hero-bg-slide');
+    if (slides.length <= 1) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    if (prefersReducedMotion.matches) {
+        slides.forEach((slide, index) => {
+            slide.classList.toggle('active', index === 0);
+        });
+        return;
+    }
+
+    let currentIndex = 0;
+
+    window.setInterval(() => {
+        slides[currentIndex].classList.remove('active');
+        currentIndex = (currentIndex + 1) % slides.length;
+        slides[currentIndex].classList.add('active');
+    }, 10000);
+}
+
+// 5. Mini carruseles por proyecto (desvanecimiento cada 3 segundos)
 function startProjectImageCarousels() {
     const galleries = document.querySelectorAll('.project-img.project-gallery');
 
@@ -448,6 +470,7 @@ function startProjectImageCarousels() {
 document.addEventListener("DOMContentLoaded", () => {
     // Si ya tenías el typingEffect, puedes llamarlo aquí o mantenerlo aparte
     initThemeToggle();
+    initHeroBackgroundSlider();
     startProfileCarousel();
     startProjectImageCarousels();
 });
