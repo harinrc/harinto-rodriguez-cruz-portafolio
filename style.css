@@ -857,6 +857,18 @@ body::after {
     isolation: isolate;
 }
 
+.profile-hex::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 35%, rgba(220, 38, 38, 0.18) 0%, rgba(220, 38, 38, 0.08) 34%, rgba(220, 38, 38, 0) 68%);
+    mix-blend-mode: screen;
+    opacity: 0.85;
+    z-index: 1;
+    pointer-events: none;
+}
+
 .profile-img {
     position: absolute;
     inset: 0;
