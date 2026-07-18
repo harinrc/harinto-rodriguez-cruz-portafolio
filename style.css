@@ -679,6 +679,15 @@ body::after {
     100% { transform: scale(1.03); opacity: 0.92; }
 }
 
+@keyframes profileRingRotate {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes profileHaloPulse {
+    0% { opacity: 0.48; transform: scale(1); }
+    100% { opacity: 0.78; transform: scale(1.04); }
+}
+
 @media (prefers-reduced-motion: reduce) {
     body::before,
     body::after {
@@ -696,6 +705,11 @@ body::after {
 
     .project-gallery .project-slide {
         transition: none;
+    }
+
+    .profile-hex::before,
+    .profile-hex::after {
+        animation: none !important;
     }
 }
 
@@ -835,23 +849,49 @@ body::after {
     width: 320px;
     height: 320px;
     border-radius: 50%;
-    padding: 6px; /* Reduce un poco el borde para que no se desfase */
-    background: linear-gradient(135deg, var(--primary-color), transparent);
-    box-shadow: 0 0 40px rgba(220, 38, 38, 0.25);
+    padding: 8px;
+    background: radial-gradient(circle at 20% 18%, rgba(248, 113, 113, 0.5), rgba(220, 38, 38, 0.08) 48%, rgba(2, 6, 23, 0.52) 100%);
+    border: 1px solid rgba(248, 113, 113, 0.28);
+    box-shadow: 0 18px 42px rgba(220, 38, 38, 0.22), 0 0 38px rgba(248, 113, 113, 0.16);
     overflow: hidden; /* Esto obliga a que TODO lo de adentro sea redondo */
+    isolation: isolate;
+}
+
+.profile-hex::before {
+    content: "";
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    border: 1px solid rgba(248, 113, 113, 0.28);
+    box-shadow: 0 0 30px rgba(220, 38, 38, 0.2);
+    opacity: 0.6;
+    z-index: 0;
+    animation: profileHaloPulse 3.8s ease-in-out infinite alternate;
+}
+
+.profile-hex::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    border-radius: 50%;
+    background: conic-gradient(from 180deg, rgba(248, 113, 113, 0.26), rgba(220, 38, 38, 0.03), rgba(248, 113, 113, 0.24));
+    filter: blur(1px);
+    z-index: 0;
+    animation: profileRingRotate 18s linear infinite;
 }
 
 .profile-img {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 8px;
+    width: auto;
+    height: auto;
     object-fit: cover; /* Centra y recorta la foto automáticamente sin deformarla */
     border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 0 0 1px rgba(2, 6, 23, 0.35);
     opacity: 0;
     transition: opacity 1s ease-in-out;
-    z-index: 1;
+    z-index: 2;
 }
 
 /* Mantiene la foto activa arriba y visible */
