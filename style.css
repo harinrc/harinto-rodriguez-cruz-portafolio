@@ -850,22 +850,37 @@ body::after {
     height: 320px;
     border-radius: 50%;
     padding: 0;
-    background: linear-gradient(180deg, rgba(220, 38, 38, 0.12), rgba(15, 23, 42, 0.92));
-    border: 1px solid rgba(248, 113, 113, 0.16);
-    box-shadow: 0 18px 36px rgba(2, 6, 23, 0.36), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
-    overflow: hidden;
+    background: radial-gradient(circle at 50% 45%, rgba(15, 23, 42, 0.96) 0%, rgba(7, 17, 31, 1) 100%);
+    border: 0;
+    box-shadow:
+        0 18px 36px rgba(2, 6, 23, 0.34),
+        0 0 0 2px rgba(248, 113, 113, 0.18),
+        0 0 24px rgba(220, 38, 38, 0.18),
+        0 0 54px rgba(220, 38, 38, 0.12);
+    overflow: visible;
     isolation: isolate;
 }
 
 .profile-hex::before {
     content: "";
     position: absolute;
+    inset: -14px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(220, 38, 38, 0) 62%, rgba(220, 38, 38, 0.42) 75%, rgba(248, 113, 113, 0.68) 82%, rgba(220, 38, 38, 0.16) 90%, rgba(220, 38, 38, 0) 100%);
+    filter: blur(5px);
+    opacity: 0.72;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.profile-hex::after {
+    content: "";
+    position: absolute;
     inset: 0;
     border-radius: 50%;
-    background: radial-gradient(circle at 50% 35%, rgba(220, 38, 38, 0.18) 0%, rgba(220, 38, 38, 0.08) 34%, rgba(220, 38, 38, 0) 68%);
-    mix-blend-mode: screen;
-    opacity: 0.85;
-    z-index: 1;
+    background: none;
+    box-shadow: none;
+    z-index: 0;
     pointer-events: none;
 }
 
@@ -885,6 +900,13 @@ body::after {
 .profile-img.active {
     opacity: 1;
     z-index: 2;
+}
+
+@media (max-width: 968px) {
+    .profile-hex {
+        width: min(300px, 82vw);
+        height: min(300px, 82vw);
+    }
 }
 
 
