@@ -549,16 +549,16 @@ body::after {
 
 .project-gallery .project-slide {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    width: auto;
-    height: auto;
-    max-width: calc(100% - 16px);
-    max-height: calc(100% - 16px);
-    transform: translate(-50%, -50%);
+    inset: 8px;
+    width: calc(100% - 16px);
+    height: calc(100% - 16px);
+    object-fit: contain;
+    object-position: center;
+    background: rgba(15, 23, 42, 0.88);
     opacity: 0;
     transition: opacity 0.85s ease-in-out;
     border-radius: 8px;
+    display: block;
 }
 
 .project-gallery .project-slide.active {
