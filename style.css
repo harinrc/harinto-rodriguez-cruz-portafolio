@@ -543,6 +543,7 @@ body::after {
 
 .project-gallery .project-thumb {
     object-fit: cover;
+    object-position: center;
     background: transparent;
 }
 
