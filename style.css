@@ -626,9 +626,13 @@ body::after {
 }
 
 .project-img.project-gallery {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     height: auto;
     min-height: 180px;
     aspect-ratio: 16 / 9;
+    overflow: hidden;
 }
 
 /* Efecto decorativo interno para las imágenes de los proyectos */
