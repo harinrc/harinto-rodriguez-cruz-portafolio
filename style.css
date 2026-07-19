@@ -549,9 +549,13 @@ body::after {
 
 .project-gallery .project-slide {
     position: absolute;
-    inset: 8px;
-    width: calc(100% - 16px);
-    height: calc(100% - 16px);
+    top: 50%;
+    left: 50%;
+    width: auto;
+    height: auto;
+    max-width: calc(100% - 16px);
+    max-height: calc(100% - 16px);
+    transform: translate(-50%, -50%);
     opacity: 0;
     transition: opacity 0.85s ease-in-out;
     border-radius: 8px;
@@ -627,13 +631,12 @@ body::after {
 }
 
 .project-img.project-gallery {
-    display: flex;
-    justify-content: center;
-    align-items: center;
     height: auto;
     min-height: 180px;
     aspect-ratio: 16 / 9;
     overflow: hidden;
+    padding: 8px;
+    box-sizing: border-box;
 }
 
 /* Efecto decorativo interno para las imágenes de los proyectos */
