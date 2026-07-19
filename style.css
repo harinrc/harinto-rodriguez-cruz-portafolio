@@ -603,7 +603,7 @@ body::after {
 }
 
 .project-img {
-    height: clamp(180px, 24vw, 240px);
+    height: clamp(180px, 24vw, 200px);
     background: linear-gradient(135deg, rgba(220, 38, 38, 0.08), var(--card-bg) 72%);
     border-radius: 10px;
     display: flex;
