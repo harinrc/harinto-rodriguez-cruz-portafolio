@@ -162,6 +162,25 @@ body {
     color: #ffe7e7;
 }
 
+.admin-thread-subheader {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.admin-thread-status.closed {
+    color: #fca5a5;
+}
+
+.admin-typing-hint {
+    color: #86efac;
+    font-style: italic;
+}
+
 .admin-conversations-list {
     max-height: 72vh;
     overflow-y: auto;

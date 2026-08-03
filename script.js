@@ -688,8 +688,15 @@ function initChatWidget() {
     let activeVisitorId = window.localStorage.getItem(CHAT_VISITOR_KEY) || '';
     let activeProfile = { name: '', contact: '' };
     let messagesRef = null;
+    let conversationMetaRef = null;
+    let adminTypingRef = null;
+    let adminPresenceRef = null;
+    let visitorTypingRef = null;
+    let visitorPresenceRef = null;
     let lastSendAt = 0;
     let currentAuthUid = '';
+    let unreadAdminCount = 0;
+    let notificationPermissionRequested = false;
 
     const getAuthUid = () => {
         if (typeof firebase === 'undefined' || typeof firebase.auth !== 'function') return '';
@@ -730,6 +737,134 @@ function initChatWidget() {
     }
 
     const sanitizeText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+
+    const updateBadge = () => {
+        if (!badge) return;
+        if (unreadAdminCount <= 0) {
+            badge.textContent = '1';
+            badge.style.display = chatWindow.classList.contains('hidden') ? 'flex' : 'none';
+            return;
+        }
+
+        badge.textContent = String(Math.min(unreadAdminCount, 99));
+        badge.style.display = 'flex';
+    };
+
+    const playNotificationTone = () => {
+        try {
+            const AudioContextRef = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextRef) return;
+            const ctx = new AudioContextRef();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.value = 820;
+            gain.gain.value = 0.001;
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            const now = ctx.currentTime;
+            gain.gain.exponentialRampToValueAtTime(0.06, now + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+
+            osc.start(now);
+            osc.stop(now + 0.24);
+        } catch (_error) {
+            // Ignorar errores de audio en navegadores restringidos.
+        }
+    };
+
+    const maybeNotifyAdminReply = (text) => {
+        const canNotify = document.hidden || chatWindow.classList.contains('hidden');
+        if (!canNotify) return;
+
+        unreadAdminCount += 1;
+        updateBadge();
+        playNotificationTone();
+
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'granted') {
+            const body = String(text || 'Tienes una nueva respuesta en tu chat.').slice(0, 140);
+            new Notification('HarinRC respondió', {
+                body,
+                icon: 'favicon.png'
+            });
+        }
+    };
+
+    const requestNotificationPermission = () => {
+        if (notificationPermissionRequested) return;
+        notificationPermissionRequested = true;
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'default') {
+            Notification.requestPermission().catch(() => {});
+        }
+    };
+
+    const clearRealtimeRefs = () => {
+        if (messagesRef) {
+            messagesRef.off();
+            messagesRef = null;
+        }
+        if (conversationMetaRef) {
+            conversationMetaRef.off();
+            conversationMetaRef = null;
+        }
+        if (adminTypingRef) {
+            adminTypingRef.off();
+            adminTypingRef = null;
+        }
+        if (adminPresenceRef) {
+            adminPresenceRef.off();
+            adminPresenceRef = null;
+        }
+        if (visitorTypingRef) {
+            visitorTypingRef.off();
+            visitorTypingRef = null;
+        }
+        if (visitorPresenceRef) {
+            visitorPresenceRef.off();
+            visitorPresenceRef = null;
+        }
+    };
+
+    const applyConversationStatus = (status) => {
+        const input = document.getElementById('chat-live-message');
+        const sendBtn = document.getElementById('chat-send-btn');
+        const statusLabel = document.getElementById('chat-status-label');
+        const isClosed = status === 'closed';
+
+        if (statusLabel) {
+            statusLabel.textContent = isClosed
+                ? 'Chat cerrado por HarinRC. Puedes enviar un nuevo primer mensaje para abrir otro chat.'
+                : 'Chat en linea con HarinRC.';
+            statusLabel.classList.toggle('closed', isClosed);
+        }
+
+        if (input) {
+            input.disabled = isClosed;
+            input.placeholder = isClosed ? 'Este chat esta cerrado.' : 'Escribe tu mensaje...';
+        }
+        if (sendBtn) {
+            sendBtn.disabled = isClosed;
+        }
+    };
+
+    const setPresenceStatus = (isOnline) => {
+        const dot = document.querySelector('.profile-status');
+        const heading = document.querySelector('.chat-header h4');
+        if (dot) {
+            dot.classList.toggle('online', !!isOnline);
+            dot.classList.toggle('offline', !isOnline);
+        }
+        if (heading) {
+            heading.textContent = isOnline
+                ? 'Contacto Directo | HarinRC (Activo)'
+                : 'Contacto Directo | HarinRC (Desconectado)';
+        }
+    };
 
     const ensureVisitorId = () => {
         const authUid = currentAuthUid || getAuthUid();
@@ -850,7 +985,9 @@ function initChatWidget() {
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 createdAtIso: nowIso,
                 visitorId: verifiedVisitorId,
-                conversationId
+                conversationId,
+                seenByAdmin: false,
+                seenByVisitor: true
             };
 
             firebase.database().ref(`conversations/${conversationId}`).set(conversationPayload)
@@ -884,11 +1021,14 @@ function initChatWidget() {
             const isVisitor = entry.senderType !== 'admin';
             const sideClass = isVisitor ? 'visitor' : 'admin';
             const safeText = String(entry.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const seenLabel = !isVisitor
+                ? (entry.seenByVisitor ? 'Leido' : 'Enviado')
+                : (entry.seenByAdmin ? 'Leido por HarinRC' : 'Enviado');
 
             return `
                 <div class="chat-message ${sideClass}">
                     <div class="chat-message-bubble">${safeText}</div>
-                    <span class="chat-message-time">${formatClock(entry.createdAt)}</span>
+                    <span class="chat-message-time">${formatClock(entry.createdAt)} · ${seenLabel}</span>
                 </div>
             `;
         }).join('');
@@ -908,6 +1048,20 @@ function initChatWidget() {
                 .map((key) => ({ id: key, ...rawMessages[key] }))
                 .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
             renderMessages(list);
+
+            const adminUnread = list.filter((entry) => entry.senderType === 'admin' && !entry.seenByVisitor);
+            if (adminUnread.length) {
+                const updates = {};
+                const nowIso = new Date().toISOString();
+                adminUnread.forEach((entry) => {
+                    updates[`messages/${conversationId}/${entry.id}/seenByVisitor`] = true;
+                    updates[`messages/${conversationId}/${entry.id}/seenAtVisitor`] = nowIso;
+                });
+                firebase.database().ref().update(updates).catch(() => {});
+
+                const latest = adminUnread[adminUnread.length - 1];
+                maybeNotifyAdminReply(latest.text || 'Nueva respuesta');
+            }
         }, (error) => {
             const errorCode = error && error.code ? String(error.code).toLowerCase() : '';
             if (!errorCode.includes('permission_denied')) {
@@ -920,6 +1074,8 @@ function initChatWidget() {
                 messagesRef = null;
             }
 
+            clearRealtimeRefs();
+
             activeConversationId = '';
             window.localStorage.removeItem(CHAT_STORAGE_KEY);
             renderEntryForm();
@@ -927,23 +1083,88 @@ function initChatWidget() {
     };
 
     const mountConversationView = (conversationId) => {
+        clearRealtimeRefs();
+
         chatBody.innerHTML = `
             <p class="chat-welcome">💬 Chat activo. Este historial se mantiene para este navegador.</p>
+            <p id="chat-status-label" class="chat-status-label">Chat en linea con HarinRC.</p>
+            <p id="chat-typing-indicator" class="chat-typing-indicator" hidden>HarinRC esta escribiendo...</p>
             <div id="chat-thread" class="chat-thread" aria-live="polite"></div>
             <form id="chat-live-form" class="chat-live-form">
                 <div class="chat-input-group">
                     <label><i class="fas fa-paper-plane"></i> Mensaje</label>
                     <textarea id="chat-live-message" maxlength="${MAX_MESSAGE_LENGTH}" required placeholder="Escribe tu mensaje..."></textarea>
                 </div>
-                <button type="submit" class="chat-submit-btn">Enviar Mensaje</button>
+                <button id="chat-send-btn" type="submit" class="chat-submit-btn">Enviar Mensaje</button>
             </form>
         `;
 
         const liveForm = document.getElementById('chat-live-form');
         const liveMessage = document.getElementById('chat-live-message');
+        const typingIndicator = document.getElementById('chat-typing-indicator');
         if (!liveForm || !liveMessage) return;
 
+        unreadAdminCount = 0;
+        updateBadge();
+
+        const visitorId = ensureVisitorId();
+        const connectedRef = firebase.database().ref('.info/connected');
+        visitorPresenceRef = firebase.database().ref(`presence/${conversationId}/visitor`);
+        connectedRef.on('value', (snap) => {
+            if (snap.val() !== true) return;
+            visitorPresenceRef.onDisconnect().set({
+                uid: visitorId,
+                isOnline: false,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            visitorPresenceRef.set({
+                uid: visitorId,
+                isOnline: true,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            }).catch(() => {});
+        });
+
+        visitorTypingRef = firebase.database().ref(`typing/${conversationId}/visitor`);
+        adminTypingRef = firebase.database().ref(`typing/${conversationId}/admin`);
+        adminPresenceRef = firebase.database().ref(`presence/${conversationId}/admin`);
+        conversationMetaRef = firebase.database().ref(`conversations/${conversationId}`);
+
+        adminTypingRef.on('value', (snap) => {
+            const val = snap.val() || {};
+            if (!typingIndicator) return;
+            typingIndicator.hidden = !val.isTyping;
+        });
+
+        adminPresenceRef.on('value', (snap) => {
+            const val = snap.val() || {};
+            setPresenceStatus(!!val.isOnline);
+        });
+
+        conversationMetaRef.on('value', (snap) => {
+            const conv = snap.val() || {};
+            applyConversationStatus(conv.status || 'open');
+        });
+
         subscribeConversationMessages(conversationId);
+
+        let typingTimer;
+        liveMessage.addEventListener('input', () => {
+            visitorTypingRef.set({
+                isTyping: liveMessage.value.trim().length > 0,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                uid: visitorId
+            }).catch(() => {});
+
+            window.clearTimeout(typingTimer);
+            typingTimer = window.setTimeout(() => {
+                visitorTypingRef.set({
+                    isTyping: false,
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                    uid: visitorId
+                }).catch(() => {});
+            }, 1000);
+        });
 
         liveForm.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -975,7 +1196,9 @@ function initChatWidget() {
                 visitorId: verifiedVisitorId,
                 conversationId,
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
-                createdAtIso: nowIso
+                createdAtIso: nowIso,
+                seenByAdmin: false,
+                seenByVisitor: true
             };
 
             Promise.all([
@@ -988,6 +1211,11 @@ function initChatWidget() {
                 })
             ]).then(() => {
                 liveMessage.value = '';
+                visitorTypingRef.set({
+                    isTyping: false,
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                    uid: verifiedVisitorId
+                }).catch(() => {});
                 if (sendButton) sendButton.disabled = false;
             }).catch((error) => {
                 console.error('Error al enviar mensaje:', error);
@@ -1005,16 +1233,22 @@ function initChatWidget() {
     }, { passive: true });
 
     chatBtn.addEventListener('click', () => {
+        requestNotificationPermission();
         const isHidden = chatWindow.classList.toggle('hidden');
         document.body.classList.toggle('chat-open', !isHidden);
-        if (badge) badge.style.display = !isHidden ? 'none' : 'flex';
+        if (!isHidden) {
+            unreadAdminCount = 0;
+            updateBadge();
+        } else if (badge) {
+            updateBadge();
+        }
     });
 
     if (closeBtn) {
         closeBtn.addEventListener('click', () => {
             chatWindow.classList.add('hidden');
             document.body.classList.remove('chat-open');
-            if (badge) badge.style.display = 'flex';
+            updateBadge();
         });
     }
 

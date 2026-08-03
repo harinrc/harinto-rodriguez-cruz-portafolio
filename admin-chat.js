@@ -29,6 +29,13 @@
     let selectedConversation = null;
     let conversationsRef = null;
     let messagesRef = null;
+    let conversationMetaRef = null;
+    let visitorTypingRef = null;
+    let adminTypingRef = null;
+    let visitorPresenceRef = null;
+    let adminPresenceRef = null;
+    let connectedRef = null;
+    let adminTypingTimer = null;
 
     function formatDate(ts) {
         if (!ts) return '--:--';
@@ -57,6 +64,51 @@
 
     function setAuthState(text) {
         stateEl.textContent = text;
+    }
+
+    function setThreadStatus(status) {
+        const statusEl = document.getElementById('admin-thread-status');
+        if (!statusEl) return;
+        const isClosed = status === 'closed';
+        statusEl.textContent = isClosed ? 'Estado: cerrado' : 'Estado: abierto';
+        statusEl.classList.toggle('closed', isClosed);
+    }
+
+    function setTypingHint(isTyping) {
+        const hintEl = document.getElementById('admin-typing-hint');
+        if (!hintEl) return;
+        hintEl.hidden = !isTyping;
+    }
+
+    function clearActiveConversationRefs() {
+        if (messagesRef) {
+            messagesRef.off();
+            messagesRef = null;
+        }
+        if (conversationMetaRef) {
+            conversationMetaRef.off();
+            conversationMetaRef = null;
+        }
+        if (visitorTypingRef) {
+            visitorTypingRef.off();
+            visitorTypingRef = null;
+        }
+        if (visitorPresenceRef) {
+            visitorPresenceRef.off();
+            visitorPresenceRef = null;
+        }
+        if (connectedRef) {
+            connectedRef.off();
+            connectedRef = null;
+        }
+        if (adminTypingRef) {
+            adminTypingRef.off();
+            adminTypingRef = null;
+        }
+        if (adminPresenceRef) {
+            adminPresenceRef.off();
+            adminPresenceRef = null;
+        }
     }
 
     async function checkAdmin(uid) {
@@ -106,10 +158,13 @@
             const senderType = msg.senderType === 'admin' ? 'admin' : 'visitor';
             const text = sanitize(msg.text);
             const who = senderType === 'admin' ? 'Tu' : 'Visitante';
+            const seen = senderType === 'admin'
+                ? (msg.seenByVisitor ? 'Leido por visitante' : 'Enviado')
+                : (msg.seenByAdmin ? 'Leido por HarinRC' : 'Enviado');
             return `
                 <div class="msg-row ${senderType}">
                     <div class="msg-bubble">${text}</div>
-                    <span class="msg-meta">${who} · ${formatDate(msg.createdAt)}</span>
+                    <span class="msg-meta">${who} · ${formatDate(msg.createdAt)} · ${seen}</span>
                 </div>
             `;
         }).join('');
@@ -150,9 +205,8 @@
         closeConversationBtn.disabled = false;
         threadMessagesEl.innerHTML = '<p class="thread-empty">Cargando mensajes...</p>';
 
-        if (messagesRef) {
-            messagesRef.off();
-        }
+        setTypingHint(false);
+        clearActiveConversationRefs();
 
         messagesRef = firebase.database().ref(`messages/${conversation.id}`).limitToLast(150);
         messagesRef.on('value', (snap) => {
@@ -161,9 +215,62 @@
                 .map((id) => ({ id, ...raw[id] }))
                 .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
             renderMessages(messages);
+
+            const unreadForAdmin = messages.filter((msg) => msg.senderType !== 'admin' && !msg.seenByAdmin);
+            if (unreadForAdmin.length) {
+                const updates = {};
+                const nowIso = new Date().toISOString();
+                unreadForAdmin.forEach((msg) => {
+                    updates[`messages/${conversation.id}/${msg.id}/seenByAdmin`] = true;
+                    updates[`messages/${conversation.id}/${msg.id}/seenAtAdmin`] = nowIso;
+                });
+                firebase.database().ref().update(updates).catch(() => {});
+            }
         }, (error) => {
             console.error('Error leyendo mensajes:', error);
             threadMessagesEl.innerHTML = '<p class="thread-empty">No se pudieron cargar los mensajes de esta conversacion.</p>';
+        });
+
+        conversationMetaRef = firebase.database().ref(`conversations/${conversation.id}`);
+        conversationMetaRef.on('value', (snap) => {
+            const meta = snap.val() || {};
+            const isClosed = meta.status === 'closed';
+            setThreadStatus(meta.status || 'open');
+            replyInput.disabled = isClosed;
+            sendBtn.disabled = isClosed;
+            replyInput.placeholder = isClosed ? 'Este chat esta cerrado.' : 'Escribe una respuesta...';
+        });
+
+        visitorTypingRef = firebase.database().ref(`typing/${conversation.id}/visitor`);
+        visitorTypingRef.on('value', (snap) => {
+            const typing = snap.val() || {};
+            setTypingHint(!!typing.isTyping);
+        });
+
+        visitorPresenceRef = firebase.database().ref(`presence/${conversation.id}/visitor`);
+        visitorPresenceRef.on('value', (snap) => {
+            const presence = snap.val() || {};
+            const onlineText = presence.isOnline ? 'en linea' : 'desconectado';
+            const name = conversation.visitorName || 'Visitante';
+            const contact = conversation.visitorContact || 'Sin contacto';
+            threadHeaderEl.textContent = `${name} · ${contact} · ${onlineText}`;
+        });
+
+        adminTypingRef = firebase.database().ref(`typing/${conversation.id}/admin`);
+        adminPresenceRef = firebase.database().ref(`presence/${conversation.id}/admin`);
+        connectedRef = firebase.database().ref('.info/connected');
+        connectedRef.on('value', (snap) => {
+            if (snap.val() !== true) return;
+            adminPresenceRef.onDisconnect().set({
+                uid: activeUid,
+                isOnline: false,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            });
+            adminPresenceRef.set({
+                uid: activeUid,
+                isOnline: true,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            }).catch(() => {});
         });
 
         watchConversations();
@@ -185,7 +292,9 @@
             visitorId: selectedConversation.visitorId || '',
             conversationId: selectedConversation.id,
             createdAt: firebase.database.ServerValue.TIMESTAMP,
-            createdAtIso: nowIso
+            createdAtIso: nowIso,
+            seenByAdmin: true,
+            seenByVisitor: false
         };
 
         try {
@@ -197,6 +306,13 @@
                 lastMessage: text
             });
             replyInput.value = '';
+            if (adminTypingRef) {
+                adminTypingRef.set({
+                    isTyping: false,
+                    uid: activeUid,
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP
+                }).catch(() => {});
+            }
         } catch (error) {
             console.error('Error enviando respuesta admin:', error);
         } finally {
@@ -217,6 +333,13 @@
                 updatedAtIso: nowIso,
                 lastMessage: '[Chat cerrado por admin]'
             });
+            if (adminTypingRef) {
+                adminTypingRef.set({
+                    isTyping: false,
+                    uid: activeUid,
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP
+                }).catch(() => {});
+            }
         } catch (error) {
             console.error('Error cerrando conversacion:', error);
         } finally {
@@ -262,11 +385,9 @@
         closeConversationBtn.disabled = true;
         threadHeaderEl.textContent = 'Selecciona una conversacion';
         threadMessagesEl.innerHTML = '<p class="thread-empty">No hay conversacion seleccionada.</p>';
-
-        if (messagesRef) {
-            messagesRef.off();
-            messagesRef = null;
-        }
+        setThreadStatus('open');
+        setTypingHint(false);
+        clearActiveConversationRefs();
 
         if (conversationsRef) {
             conversationsRef.off();
@@ -279,6 +400,24 @@
     logoutBtn.addEventListener('click', logout);
     replyForm.addEventListener('submit', sendReply);
     closeConversationBtn.addEventListener('click', closeConversation);
+    replyInput.addEventListener('input', () => {
+        if (!selectedConversation || !adminTypingRef) return;
+        adminTypingRef.set({
+            isTyping: replyInput.value.trim().length > 0,
+            uid: activeUid,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+        }).catch(() => {});
+
+        window.clearTimeout(adminTypingTimer);
+        adminTypingTimer = window.setTimeout(() => {
+            if (!adminTypingRef) return;
+            adminTypingRef.set({
+                isTyping: false,
+                uid: activeUid,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            }).catch(() => {});
+        }, 1000);
+    });
 
     copyUidBtn.addEventListener('click', async () => {
         if (!activeUid) return;
