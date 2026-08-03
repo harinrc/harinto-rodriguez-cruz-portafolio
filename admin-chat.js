@@ -19,6 +19,7 @@
     const replyInput = document.getElementById('admin-reply-input');
     const sendBtn = document.getElementById('admin-send-btn');
     const closeConversationBtn = document.getElementById('admin-close-conversation-btn');
+    const deleteConversationBtn = document.getElementById('admin-delete-conversation-btn');
 
     if (typeof firebase === 'undefined') {
         console.error('Firebase no esta cargado.');
@@ -135,9 +136,11 @@
             const title = sanitize(item.visitorName || 'Visitante');
             const contact = sanitize(item.visitorContact || 'Sin contacto');
             const last = sanitize(item.lastMessage || 'Sin mensajes');
+            const unreadForAdmin = Number(item.unreadForAdmin || 0);
+            const unreadHtml = unreadForAdmin > 0 ? `<span class="conversation-unread">${Math.min(unreadForAdmin, 99)}</span>` : '';
             return `
                 <button type="button" class="conversation-item ${active}" data-conv-id="${item.id}">
-                    <div class="conversation-title">${title}</div>
+                    <div class="conversation-title">${title}${unreadHtml}</div>
                     <div class="conversation-sub">${contact}</div>
                     <div class="conversation-sub">${last}</div>
                     <div class="conversation-sub">${formatDate(item.updatedAt)}</div>
@@ -206,6 +209,9 @@
         threadHeaderEl.textContent = `${conversation.visitorName || 'Visitante'} · ${conversation.visitorContact || 'Sin contacto'}`;
         sendBtn.disabled = false;
         closeConversationBtn.disabled = false;
+        deleteConversationBtn.disabled = false;
+        replyInput.disabled = false;
+        replyInput.placeholder = 'Escribe una respuesta...';
         threadMessagesEl.innerHTML = '<p class="thread-empty">Cargando mensajes...</p>';
 
         setTypingHint(false);
@@ -228,6 +234,7 @@
                     updates[`messages/${conversation.id}/${msg.id}/seenByAdmin`] = true;
                     updates[`messages/${conversation.id}/${msg.id}/seenAtAdmin`] = nowIso;
                 });
+                updates[`conversations/${conversation.id}/unreadForAdmin`] = 0;
                 db.ref().update(updates).catch(() => {});
             }
         }, (error) => {
@@ -305,7 +312,8 @@
                 status: 'open',
                 updatedAt: firebase.database.ServerValue.TIMESTAMP,
                 updatedAtIso: nowIso,
-                lastMessage: text
+                lastMessage: text,
+                unreadForVisitor: firebase.database.ServerValue.increment(1)
             });
             replyInput.value = '';
             if (adminTypingRef) {
@@ -351,6 +359,45 @@
         }
     }
 
+    async function deleteConversation() {
+        if (!selectedConversation || !isAdmin) return;
+
+        const ok = window.confirm('Se eliminara todo el historial de este chat. Esta accion no se puede deshacer.');
+        if (!ok) return;
+
+        const conversationId = selectedConversation.id;
+        deleteConversationBtn.disabled = true;
+        closeConversationBtn.disabled = true;
+        sendBtn.disabled = true;
+
+        try {
+            const updates = {};
+            updates[`messages/${conversationId}`] = null;
+            updates[`typing/${conversationId}`] = null;
+            updates[`presence/${conversationId}`] = null;
+            updates[`conversations/${conversationId}`] = null;
+            await db.ref().update(updates);
+
+            selectedConversation = null;
+            threadHeaderEl.textContent = 'Selecciona una conversacion';
+            threadMessagesEl.innerHTML = '<p class="thread-empty">No hay conversacion seleccionada.</p>';
+            replyInput.value = '';
+            replyInput.disabled = true;
+            setThreadStatus('open');
+            setTypingHint(false);
+            clearActiveConversationRefs();
+            deleteConversationBtn.disabled = true;
+            closeConversationBtn.disabled = true;
+            sendBtn.disabled = true;
+        } catch (error) {
+            console.error('Error eliminando conversacion:', error);
+            alert('No se pudo eliminar el chat. Revisa permisos en rules.');
+            deleteConversationBtn.disabled = false;
+            closeConversationBtn.disabled = false;
+            sendBtn.disabled = false;
+        }
+    }
+
     async function loginWithGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
         try {
@@ -387,6 +434,10 @@
         selectedConversation = null;
         sendBtn.disabled = true;
         closeConversationBtn.disabled = true;
+        deleteConversationBtn.disabled = true;
+        replyInput.disabled = true;
+        replyInput.value = '';
+        replyInput.placeholder = 'Escribe una respuesta...';
         threadHeaderEl.textContent = 'Selecciona una conversacion';
         threadMessagesEl.innerHTML = '<p class="thread-empty">No hay conversacion seleccionada.</p>';
         setThreadStatus('open');
@@ -489,6 +540,7 @@
     logoutBtn.addEventListener('click', logout);
     replyForm.addEventListener('submit', sendReply);
     closeConversationBtn.addEventListener('click', closeConversation);
+    deleteConversationBtn.addEventListener('click', deleteConversation);
     replyInput.addEventListener('input', () => {
         if (!selectedConversation || !adminTypingRef) return;
         adminTypingRef.set({

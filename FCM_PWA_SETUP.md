@@ -27,12 +27,14 @@
 
 Funcion creada:
 - `pushOnVisitorMessage`
+- `pushOnAdminMessage`
 
 Trigger:
 - `/messages/{conversationId}/{messageId}`
 
 Comportamiento:
 - Si `senderType` es `visitor`, envía push a todos los tokens guardados en `admin_push_tokens/*`.
+- Si `senderType` es `admin`, envía push a los tokens del visitante en `visitor_push_tokens/{visitorId}`.
 
 ## 4) PWA solo para admin
 
@@ -52,6 +54,7 @@ Esto significa:
 3. Acepta permiso de notificaciones.
 4. Verifica que aparezca token en RTDB:
    - `admin_push_tokens/{adminUid}/{tokenKey}`
+   - `visitor_push_tokens/{visitorUid}/{tokenKey}` (cuando visitante acepta notificaciones)
 5. Envia mensaje desde visitante.
 6. Debe llegar push al admin aunque admin este en segundo plano.
 

@@ -693,10 +693,13 @@ function initChatWidget() {
     let adminPresenceRef = null;
     let visitorTypingRef = null;
     let visitorPresenceRef = null;
+    let visitorMessagingRef = null;
+    let visitorSwReg = null;
     let lastSendAt = 0;
     let currentAuthUid = '';
     let unreadAdminCount = 0;
     let notificationPermissionRequested = false;
+    const VISITOR_VAPID_PUBLIC_KEY = 'REEMPLAZA_CON_TU_VAPID_KEY_PUBLICA';
 
     const getAuthUid = () => {
         if (typeof firebase === 'undefined' || typeof firebase.auth !== 'function') return '';
@@ -737,6 +740,49 @@ function initChatWidget() {
     }
 
     const sanitizeText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+
+    const normalizeTokenKey = (token) => String(token || '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 160);
+
+    const saveVisitorPushToken = async (visitorId, token) => {
+        if (!visitorId || !token) return;
+        const tokenKey = normalizeTokenKey(token);
+        await firebase.database().ref(`visitor_push_tokens/${visitorId}/${tokenKey}`).set({
+            token,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+            userAgent: navigator.userAgent || ''
+        });
+    };
+
+    const ensureVisitorMessaging = async (visitorId) => {
+        if (!visitorId) return;
+        if (!('serviceWorker' in navigator)) return;
+        if (!firebase.messaging || !firebase.messaging.isSupported || !firebase.messaging.isSupported()) return;
+
+        try {
+            if (!visitorSwReg) {
+                visitorSwReg = await navigator.serviceWorker.register('./admin-sw.js');
+            }
+
+            if (!visitorMessagingRef) {
+                visitorMessagingRef = firebase.messaging();
+                visitorMessagingRef.useServiceWorker(visitorSwReg);
+                if (VISITOR_VAPID_PUBLIC_KEY && !VISITOR_VAPID_PUBLIC_KEY.startsWith('REEMPLAZA_')) {
+                    visitorMessagingRef.usePublicVapidKey(VISITOR_VAPID_PUBLIC_KEY);
+                }
+            }
+
+            if ('Notification' in window && Notification.permission === 'default') {
+                await Notification.requestPermission();
+            }
+
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+            const token = await visitorMessagingRef.getToken();
+            await saveVisitorPushToken(visitorId, token);
+        } catch (error) {
+            console.error('No se pudo registrar push para visitante:', error);
+        }
+    };
 
     const updateBadge = () => {
         if (!badge) return;
@@ -976,7 +1022,9 @@ function initChatWidget() {
                 updatedAtIso: nowIso,
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                lastMessage: ''
+                lastMessage: '',
+                unreadForAdmin: 0,
+                unreadForVisitor: 0
             };
 
             const messagePayload = {
@@ -996,7 +1044,8 @@ function initChatWidget() {
                     lastMessage: message,
                     status: 'open',
                     updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                    updatedAtIso: nowIso
+                    updatedAtIso: nowIso,
+                    unreadForAdmin: firebase.database.ServerValue.increment(1)
                 }))
                 .then(() => firebase.database().ref('mensajes_contacto').push({
                     nombre: name,
@@ -1006,6 +1055,7 @@ function initChatWidget() {
                     fecha: new Date().toLocaleString('es-NI', { timeZone: 'America/Managua' })
                 }))
                 .then(() => {
+                ensureVisitorMessaging(verifiedVisitorId);
                 mountConversationView(conversationId);
             }).catch((error) => {
                 console.error('Error al iniciar chat:', error);
@@ -1063,6 +1113,7 @@ function initChatWidget() {
                     updates[`messages/${conversationId}/${entry.id}/seenByVisitor`] = true;
                     updates[`messages/${conversationId}/${entry.id}/seenAtVisitor`] = nowIso;
                 });
+                updates[`conversations/${conversationId}/unreadForVisitor`] = 0;
                 firebase.database().ref().update(updates).catch(() => {});
 
                 const latest = adminUnread[adminUnread.length - 1];
@@ -1114,6 +1165,7 @@ function initChatWidget() {
         updateBadge();
 
         const visitorId = ensureVisitorId();
+        ensureVisitorMessaging(visitorId);
         const connectedRef = firebase.database().ref('.info/connected');
         visitorPresenceRef = firebase.database().ref(`presence/${conversationId}/visitor`);
         connectedRef.on('value', (snap) => {
@@ -1212,7 +1264,8 @@ function initChatWidget() {
                     updatedAt: firebase.database.ServerValue.TIMESTAMP,
                     updatedAtIso: nowIso,
                     lastMessage: text,
-                    status: 'open'
+                    status: 'open',
+                    unreadForAdmin: firebase.database.ServerValue.increment(1)
                 }))
                 .then(() => {
                 liveMessage.value = '';

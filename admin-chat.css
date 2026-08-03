@@ -124,6 +124,11 @@ body {
     background: rgba(255, 255, 255, 0.03);
 }
 
+.admin-btn.danger {
+    background: linear-gradient(135deg, #7f1d1d, #991b1b);
+    border-color: rgba(248, 113, 113, 0.4);
+}
+
 .uid-box {
     display: flex;
     gap: 8px;
@@ -208,6 +213,25 @@ body {
 .conversation-title {
     font-weight: 700;
     margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.conversation-unread {
+    min-width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fff;
+    background: linear-gradient(140deg, #dc2626, #f87171);
+    box-shadow: 0 0 10px rgba(248, 113, 113, 0.55);
 }
 
 .conversation-sub {
