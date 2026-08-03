@@ -766,6 +766,7 @@ function initChatWidget() {
     let adminPresenceRef = null;
     let visitorTypingRef = null;
     let visitorPresenceRef = null;
+    let connectedRef = null;
     let visitorMessagingRef = null;
     let visitorSwReg = null;
     let lastSendAt = 0;
@@ -815,37 +816,97 @@ function initChatWidget() {
     const sanitizeText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
     const submitVisitorMessageSecure = async ({ conversationId = '', visitorName = '', visitorContact = '', text = '' }) => {
-        if (typeof firebase === 'undefined' || typeof firebase.functions !== 'function') {
-            throw new Error('Firebase Functions no está disponible.');
+        if (typeof firebase === 'undefined' || typeof firebase.database !== 'function') {
+            throw new Error('Firebase no está disponible.');
+        }
+        const authUser = firebase.auth && firebase.auth().currentUser;
+        const uid = authUser && authUser.uid;
+        if (!uid) {
+            throw { code: 'unauthenticated', message: 'No autenticado' };
         }
 
-        const callable = firebase.functions().httpsCallable('submitVisitorMessage');
-        const result = await callable({
-            conversationId,
-            visitorName,
-            visitorContact,
-            text
+        const db = firebase.database();
+        const nowIso = new Date().toISOString();
+        const clean = (v, max) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, max);
+        const name = clean(visitorName, 100);
+        const contact = clean(visitorContact, 120);
+        const msg = clean(text, 420);
+
+        let resolvedId = String(conversationId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 120);
+
+        if (resolvedId) {
+            const snap = await db.ref(`conversations/${resolvedId}`).once('value');
+            if (!snap.exists() || (snap.val() || {}).visitorId !== uid) {
+                resolvedId = '';
+            }
+        }
+
+        if (!resolvedId) {
+            const newRef = db.ref('conversations').push();
+            resolvedId = newRef.key;
+            await newRef.set({
+                conversationId: resolvedId,
+                visitorId: uid,
+                visitorName: name,
+                visitorContact: contact,
+                status: 'open',
+                source: 'web_portfolio_widget',
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                createdAtIso: nowIso,
+                updatedAtIso: nowIso,
+                lastMessage: '',
+                unreadForAdmin: 0,
+                unreadForVisitor: 0
+            });
+        }
+
+        await db.ref(`messages/${resolvedId}`).push({
+            senderType: 'visitor',
+            text: msg,
+            visitorId: uid,
+            conversationId: resolvedId,
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            createdAtIso: nowIso,
+            seenByAdmin: false,
+            seenByVisitor: true
         });
 
-        const payload = result && result.data ? result.data : {};
-        if (!payload.conversationId) {
-            throw new Error('No se recibió ID de conversación del servidor.');
-        }
-        return payload;
+        await db.ref(`conversations/${resolvedId}`).update({
+            visitorName: name,
+            visitorContact: contact,
+            status: 'open',
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+            updatedAtIso: nowIso,
+            lastMessage: msg,
+            unreadForAdmin: firebase.database.ServerValue.increment(1)
+        });
+
+        // non-critical legacy write
+        db.ref('mensajes_contacto').push({
+            nombre: name,
+            contacto: contact,
+            mensaje: msg,
+            conversationId: resolvedId,
+            fecha: new Date().toLocaleString('es-NI', { timeZone: 'America/Managua' })
+        }).catch(() => {});
+
+        return { ok: true, conversationId: resolvedId };
     };
 
     const resolveSubmitError = (error) => {
         const code = String((error && error.code) || '').toLowerCase();
         const message = String((error && error.message) || '').toLowerCase();
+        console.warn('[Chat] Error al enviar:', error && error.code, '|', error && error.message);
 
-        if (code.includes('resource-exhausted') || message.includes('demasiados mensajes')) {
-            return 'Has enviado muchos mensajes en poco tiempo. Espera un momento e inténtalo de nuevo.';
-        }
-        if (code.includes('failed-precondition') || message.includes('app check')) {
-            return 'Verificación de seguridad pendiente. Recarga la página e inténtalo de nuevo.';
-        }
         if (code.includes('unauthenticated')) {
             return 'No se pudo validar tu sesión. Recarga la página para continuar.';
+        }
+        if (code.includes('permission-denied') || message.includes('permission_denied')) {
+            return 'La sesión de chat expiró. Por favor, recarga la página e inicia una nueva conversación.';
+        }
+        if (message.includes('firebase') || message.includes('network') || message.includes('unavailable')) {
+            return 'Error de conexión. Verifica tu internet e intenta de nuevo.';
         }
         return 'No se pudo enviar el mensaje. Intenta de nuevo en unos segundos.';
     };
@@ -982,6 +1043,10 @@ function initChatWidget() {
         if (visitorPresenceRef) {
             visitorPresenceRef.off();
             visitorPresenceRef = null;
+        }
+        if (connectedRef) {
+            connectedRef.off();
+            connectedRef = null;
         }
     };
 
@@ -1132,6 +1197,12 @@ function initChatWidget() {
                 mountConversationView(resolvedConversationId);
             }).catch((error) => {
                 console.error('Error al iniciar chat:', error);
+                const errorCode = String((error && error.code) || '').toLowerCase();
+                if (errorCode.includes('permission-denied')) {
+                    // Stale conversationId from a previous auth session — reset so next attempt creates a new one
+                    activeConversationId = '';
+                    window.localStorage.removeItem(CHAT_STORAGE_KEY);
+                }
                 alert(resolveSubmitError(error));
                 if (submitButton) submitButton.disabled = false;
             });
@@ -1239,10 +1310,11 @@ function initChatWidget() {
 
         const visitorId = ensureVisitorId();
         ensureVisitorMessaging(visitorId);
-        const connectedRef = firebase.database().ref('.info/connected');
+        connectedRef = firebase.database().ref('.info/connected');
         visitorPresenceRef = firebase.database().ref(`presence/${conversationId}/visitor`);
         connectedRef.on('value', (snap) => {
             if (snap.val() !== true) return;
+            if (!visitorPresenceRef) return;
             visitorPresenceRef.onDisconnect().set({
                 uid: visitorId,
                 isOnline: false,
