@@ -239,10 +239,138 @@ function deletingEffect() {
     loopDeleting();
 }
 
+function initSectionTypewriter() {
+    const typingElements = Array.from(document.querySelectorAll('.js-typewriter:not(.js-typewriter-loop)'));
+    if (!typingElements.length) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const playTyping = (element) => {
+        if (!element || element.dataset.typed === 'true') return;
+
+        const fullText = element.dataset.fullText || element.textContent.trim();
+        element.dataset.fullText = fullText;
+        element.dataset.typed = 'true';
+
+        if (prefersReducedMotion) {
+            element.textContent = fullText;
+            element.classList.add('is-complete');
+            return;
+        }
+
+        element.textContent = '';
+        element.classList.remove('is-complete');
+
+        let charIndex = 0;
+        const typeNextChar = () => {
+            if (charIndex < fullText.length) {
+                element.textContent += fullText.charAt(charIndex);
+                charIndex += 1;
+                window.setTimeout(typeNextChar, 55);
+                return;
+            }
+
+            element.classList.add('is-complete');
+        };
+
+        typeNextChar();
+    };
+
+    if (!('IntersectionObserver' in window)) {
+        typingElements.forEach(playTyping);
+        return;
+    }
+
+    const observer = new IntersectionObserver((entries, obs) => {
+        entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            playTyping(entry.target);
+            obs.unobserve(entry.target);
+        });
+    }, {
+        threshold: 0.35,
+        rootMargin: '0px 0px -8% 0px'
+    });
+
+    typingElements.forEach((element) => observer.observe(element));
+}
+
+function initLoopingFooterTypewriter() {
+    const loopElements = Array.from(document.querySelectorAll('.js-typewriter-loop'));
+    if (!loopElements.length) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const runLoop = (element) => {
+        if (!element || element.dataset.loopStarted === 'true') return;
+
+        const fallbackText = element.dataset.fullText || element.textContent.trim();
+        const phrases = (element.dataset.loopPhrases || fallbackText)
+            .split('|')
+            .map((phrase) => phrase.trim())
+            .filter(Boolean);
+
+        if (!phrases.length) return;
+
+        element.dataset.fullText = phrases[0];
+        element.dataset.loopStarted = 'true';
+
+        if (prefersReducedMotion) {
+            element.textContent = phrases[0];
+            element.classList.add('is-complete');
+            return;
+        }
+
+        element.classList.remove('is-complete');
+
+        let phraseIndex = 0;
+        let charIndex = 0;
+        let isDeleting = false;
+
+        const tick = () => {
+            const currentPhrase = phrases[phraseIndex];
+
+            if (!isDeleting) {
+                charIndex += 1;
+                element.textContent = currentPhrase.slice(0, charIndex);
+
+                if (charIndex >= currentPhrase.length) {
+                    isDeleting = true;
+                    window.setTimeout(tick, 1700);
+                    return;
+                }
+
+                window.setTimeout(tick, 55);
+                return;
+            }
+
+            charIndex -= 1;
+            element.textContent = currentPhrase.slice(0, Math.max(0, charIndex));
+
+            if (charIndex <= 0) {
+                isDeleting = false;
+                phraseIndex = (phraseIndex + 1) % phrases.length;
+                window.setTimeout(tick, 460);
+                return;
+            }
+
+            window.setTimeout(tick, 38);
+        };
+
+        element.textContent = '';
+        tick();
+    };
+
+    // Inicia siempre para evitar casos donde el observer no dispare en el footer.
+    loopElements.forEach(runLoop);
+}
+
 // Iniciar el efecto cuando cargue la página
 document.addEventListener("DOMContentLoaded", () => {
     initPcbBackground();
     typingEffect();
+    initSectionTypewriter();
+    initLoopingFooterTypewriter();
 });
 
 

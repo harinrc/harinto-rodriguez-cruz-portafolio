@@ -1881,6 +1881,20 @@ body::after {
     transform: translateY(-2px) scale(0.995);
 }
 
+.js-typewriter {
+    display: inline-block;
+    min-height: 1em;
+    border-right: 2px solid rgba(248, 113, 113, 0.92);
+    padding-right: 4px;
+    animation: blink 0.75s step-end infinite;
+}
+
+.js-typewriter.is-complete {
+    border-right: none;
+    padding-right: 0;
+    animation: none;
+}
+
 .gallery-card::after,
 .project-card::after,
 .skill-card::after {
