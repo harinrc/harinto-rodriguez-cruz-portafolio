@@ -741,6 +741,42 @@ function initChatWidget() {
 
     const sanitizeText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
+    const submitVisitorMessageSecure = async ({ conversationId = '', visitorName = '', visitorContact = '', text = '' }) => {
+        if (typeof firebase === 'undefined' || typeof firebase.functions !== 'function') {
+            throw new Error('Firebase Functions no está disponible.');
+        }
+
+        const callable = firebase.functions().httpsCallable('submitVisitorMessage');
+        const result = await callable({
+            conversationId,
+            visitorName,
+            visitorContact,
+            text
+        });
+
+        const payload = result && result.data ? result.data : {};
+        if (!payload.conversationId) {
+            throw new Error('No se recibió ID de conversación del servidor.');
+        }
+        return payload;
+    };
+
+    const resolveSubmitError = (error) => {
+        const code = String((error && error.code) || '').toLowerCase();
+        const message = String((error && error.message) || '').toLowerCase();
+
+        if (code.includes('resource-exhausted') || message.includes('demasiados mensajes')) {
+            return 'Has enviado muchos mensajes en poco tiempo. Espera un momento e inténtalo de nuevo.';
+        }
+        if (code.includes('failed-precondition') || message.includes('app check')) {
+            return 'Verificación de seguridad pendiente. Recarga la página e inténtalo de nuevo.';
+        }
+        if (code.includes('unauthenticated')) {
+            return 'No se pudo validar tu sesión. Recarga la página para continuar.';
+        }
+        return 'No se pudo enviar el mensaje. Intenta de nuevo en unos segundos.';
+    };
+
     const normalizeTokenKey = (token) => String(token || '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 160);
 
     const saveVisitorPushToken = async (visitorId, token) => {
@@ -998,7 +1034,6 @@ function initChatWidget() {
             window.localStorage.setItem(CHAT_PROFILE_KEY, JSON.stringify(activeProfile));
 
             const conversationId = ensureConversationId();
-            const nowIso = new Date().toISOString();
 
             const submitButton = chatForm.querySelector('button[type="submit"]');
             if (submitButton) submitButton.disabled = true;
@@ -1011,54 +1046,20 @@ function initChatWidget() {
                 return;
             }
 
-            const conversationPayload = {
+            submitVisitorMessageSecure({
                 conversationId,
-                visitorId: verifiedVisitorId,
                 visitorName: name,
                 visitorContact: contact,
-                status: 'open',
-                source: 'web_portfolio_widget',
-                createdAtIso: nowIso,
-                updatedAtIso: nowIso,
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                lastMessage: '',
-                unreadForAdmin: 0,
-                unreadForVisitor: 0
-            };
-
-            const messagePayload = {
-                senderType: 'visitor',
-                text: message,
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                createdAtIso: nowIso,
-                visitorId: verifiedVisitorId,
-                conversationId,
-                seenByAdmin: false,
-                seenByVisitor: true
-            };
-
-            firebase.database().ref(`conversations/${conversationId}`).set(conversationPayload)
-                .then(() => firebase.database().ref(`messages/${conversationId}`).push(messagePayload))
-                .then(() => firebase.database().ref(`conversations/${conversationId}`).update({
-                    lastMessage: message,
-                    status: 'open',
-                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                    updatedAtIso: nowIso,
-                    unreadForAdmin: firebase.database.ServerValue.increment(1)
-                }))
-                .then(() => firebase.database().ref('mensajes_contacto').push({
-                    nombre: name,
-                    contacto: contact,
-                    mensaje: message,
-                    conversationId,
-                    fecha: new Date().toLocaleString('es-NI', { timeZone: 'America/Managua' })
-                }))
-                .then(() => {
+                text: message
+            }).then((res) => {
+                const resolvedConversationId = String(res.conversationId || conversationId);
+                activeConversationId = resolvedConversationId;
+                window.localStorage.setItem(CHAT_STORAGE_KEY, resolvedConversationId);
                 ensureVisitorMessaging(verifiedVisitorId);
-                mountConversationView(conversationId);
+                mountConversationView(resolvedConversationId);
             }).catch((error) => {
                 console.error('Error al iniciar chat:', error);
+                alert(resolveSubmitError(error));
                 if (submitButton) submitButton.disabled = false;
             });
         });
@@ -1113,7 +1114,6 @@ function initChatWidget() {
                     updates[`messages/${conversationId}/${entry.id}/seenByVisitor`] = true;
                     updates[`messages/${conversationId}/${entry.id}/seenAtVisitor`] = nowIso;
                 });
-                updates[`conversations/${conversationId}/unreadForVisitor`] = 0;
                 firebase.database().ref().update(updates).catch(() => {});
 
                 const latest = adminUnread[adminUnread.length - 1];
@@ -1235,8 +1235,6 @@ function initChatWidget() {
             if (!text) return;
 
             lastSendAt = now;
-            const nowIso = new Date().toISOString();
-
             const sendButton = liveForm.querySelector('button[type="submit"]');
             if (sendButton) sendButton.disabled = true;
 
@@ -1248,26 +1246,17 @@ function initChatWidget() {
                 return;
             }
 
-            const payload = {
-                senderType: 'visitor',
-                text,
-                visitorId: verifiedVisitorId,
+            submitVisitorMessageSecure({
                 conversationId,
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                createdAtIso: nowIso,
-                seenByAdmin: false,
-                seenByVisitor: true
-            };
-
-            firebase.database().ref(`messages/${conversationId}`).push(payload)
-                .then(() => firebase.database().ref(`conversations/${conversationId}`).update({
-                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                    updatedAtIso: nowIso,
-                    lastMessage: text,
-                    status: 'open',
-                    unreadForAdmin: firebase.database.ServerValue.increment(1)
-                }))
-                .then(() => {
+                visitorName: activeProfile.name,
+                visitorContact: activeProfile.contact,
+                text
+            }).then((res) => {
+                const resolvedConversationId = String(res.conversationId || conversationId);
+                if (resolvedConversationId !== conversationId) {
+                    activeConversationId = resolvedConversationId;
+                    window.localStorage.setItem(CHAT_STORAGE_KEY, resolvedConversationId);
+                }
                 liveMessage.value = '';
                 visitorTypingRef.set({
                     isTyping: false,
@@ -1277,6 +1266,7 @@ function initChatWidget() {
                 if (sendButton) sendButton.disabled = false;
             }).catch((error) => {
                 console.error('Error al enviar mensaje:', error);
+                alert(resolveSubmitError(error));
                 if (sendButton) sendButton.disabled = false;
             });
         });
