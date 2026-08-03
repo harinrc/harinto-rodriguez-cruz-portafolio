@@ -209,6 +209,12 @@
             }
         }, (error) => {
             console.error('Error leyendo conversaciones:', error);
+            const code = error && error.code ? String(error.code) : '';
+            if (code.toLowerCase().includes('permission_denied')) {
+                listEl.innerHTML = '<p class="thread-empty">Permiso denegado para leer conversaciones. Publica rules actualizadas.</p>';
+            } else {
+                listEl.innerHTML = '<p class="thread-empty">No se pudieron cargar conversaciones.</p>';
+            }
         });
     }
 
