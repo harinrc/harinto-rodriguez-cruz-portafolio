@@ -976,7 +976,7 @@ function initChatWidget() {
                 updatedAtIso: nowIso,
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                lastMessage: message
+                lastMessage: ''
             };
 
             const messagePayload = {
@@ -992,6 +992,12 @@ function initChatWidget() {
 
             firebase.database().ref(`conversations/${conversationId}`).set(conversationPayload)
                 .then(() => firebase.database().ref(`messages/${conversationId}`).push(messagePayload))
+                .then(() => firebase.database().ref(`conversations/${conversationId}`).update({
+                    lastMessage: message,
+                    status: 'open',
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                    updatedAtIso: nowIso
+                }))
                 .then(() => firebase.database().ref('mensajes_contacto').push({
                     nombre: name,
                     contacto: contact,
@@ -1201,15 +1207,14 @@ function initChatWidget() {
                 seenByVisitor: true
             };
 
-            Promise.all([
-                firebase.database().ref(`messages/${conversationId}`).push(payload),
-                firebase.database().ref(`conversations/${conversationId}`).update({
+            firebase.database().ref(`messages/${conversationId}`).push(payload)
+                .then(() => firebase.database().ref(`conversations/${conversationId}`).update({
                     updatedAt: firebase.database.ServerValue.TIMESTAMP,
                     updatedAtIso: nowIso,
                     lastMessage: text,
                     status: 'open'
-                })
-            ]).then(() => {
+                }))
+                .then(() => {
                 liveMessage.value = '';
                 visitorTypingRef.set({
                     isTyping: false,

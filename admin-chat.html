@@ -4,7 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#0b1220">
     <title>Panel Admin Chat | HarinRC</title>
+    <link rel="manifest" href="admin-manifest.webmanifest">
+    <link rel="icon" href="favicon.png" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Exo+2:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -17,6 +20,7 @@
             <h1><span>Harin</span>RC Admin Chat</h1>
             <div class="admin-topbar-actions">
                 <span id="admin-auth-state" class="admin-auth-state">Sin sesion</span>
+                <button id="admin-install-pwa-btn" class="admin-btn ghost" type="button" hidden>Instalar App</button>
                 <button id="admin-logout-btn" class="admin-btn ghost" type="button" hidden>Cerrar sesion</button>
             </div>
         </header>
@@ -70,6 +74,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
 
     <script>
       const firebaseConfig = {

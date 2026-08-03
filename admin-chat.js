@@ -1,6 +1,7 @@
 (function () {
     const stateEl = document.getElementById('admin-auth-state');
     const logoutBtn = document.getElementById('admin-logout-btn');
+    const pwaInstallBtn = document.getElementById('admin-install-pwa-btn');
 
     const loginSection = document.getElementById('admin-login');
     const unauthorizedSection = document.getElementById('admin-unauthorized');
@@ -24,6 +25,10 @@
         return;
     }
 
+    const db = firebase.database();
+    const auth = firebase.auth();
+    const FCM_VAPID_PUBLIC_KEY = 'REEMPLAZA_CON_TU_VAPID_KEY_PUBLICA';
+
     let isAdmin = false;
     let activeUid = '';
     let selectedConversation = null;
@@ -36,6 +41,9 @@
     let adminPresenceRef = null;
     let connectedRef = null;
     let adminTypingTimer = null;
+    let messaging = null;
+    let swReg = null;
+    let deferredInstallPrompt = null;
 
     function formatDate(ts) {
         if (!ts) return '--:--';
@@ -112,7 +120,7 @@
     }
 
     async function checkAdmin(uid) {
-        const snap = await firebase.database().ref(`admins/${uid}`).once('value');
+        const snap = await db.ref(`admins/${uid}`).once('value');
         return snap.exists() && snap.val() === true;
     }
 
@@ -173,11 +181,9 @@
     }
 
     function watchConversations() {
-        if (conversationsRef) {
-            conversationsRef.off();
-        }
+        if (conversationsRef) conversationsRef.off();
 
-        conversationsRef = firebase.database().ref('conversations').orderByChild('updatedAt').limitToLast(120);
+        conversationsRef = db.ref('conversations').orderByChild('updatedAt').limitToLast(180);
         conversationsRef.on('value', (snap) => {
             const raw = snap.val() || {};
             const items = Object.keys(raw)
@@ -188,10 +194,7 @@
 
             if (selectedConversation) {
                 const fresh = items.find((it) => it.id === selectedConversation.id);
-                if (fresh) {
-                    selectedConversation = fresh;
-                    threadHeaderEl.textContent = `${fresh.visitorName || 'Visitante'} · ${fresh.visitorContact || 'Sin contacto'}`;
-                }
+                if (fresh) selectedConversation = fresh;
             }
         }, (error) => {
             console.error('Error leyendo conversaciones:', error);
@@ -208,12 +211,13 @@
         setTypingHint(false);
         clearActiveConversationRefs();
 
-        messagesRef = firebase.database().ref(`messages/${conversation.id}`).limitToLast(150);
+        messagesRef = db.ref(`messages/${conversation.id}`).limitToLast(220);
         messagesRef.on('value', (snap) => {
             const raw = snap.val() || {};
             const messages = Object.keys(raw)
                 .map((id) => ({ id, ...raw[id] }))
                 .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
             renderMessages(messages);
 
             const unreadForAdmin = messages.filter((msg) => msg.senderType !== 'admin' && !msg.seenByAdmin);
@@ -224,14 +228,14 @@
                     updates[`messages/${conversation.id}/${msg.id}/seenByAdmin`] = true;
                     updates[`messages/${conversation.id}/${msg.id}/seenAtAdmin`] = nowIso;
                 });
-                firebase.database().ref().update(updates).catch(() => {});
+                db.ref().update(updates).catch(() => {});
             }
         }, (error) => {
             console.error('Error leyendo mensajes:', error);
             threadMessagesEl.innerHTML = '<p class="thread-empty">No se pudieron cargar los mensajes de esta conversacion.</p>';
         });
 
-        conversationMetaRef = firebase.database().ref(`conversations/${conversation.id}`);
+        conversationMetaRef = db.ref(`conversations/${conversation.id}`);
         conversationMetaRef.on('value', (snap) => {
             const meta = snap.val() || {};
             const isClosed = meta.status === 'closed';
@@ -241,24 +245,24 @@
             replyInput.placeholder = isClosed ? 'Este chat esta cerrado.' : 'Escribe una respuesta...';
         });
 
-        visitorTypingRef = firebase.database().ref(`typing/${conversation.id}/visitor`);
+        visitorTypingRef = db.ref(`typing/${conversation.id}/visitor`);
         visitorTypingRef.on('value', (snap) => {
             const typing = snap.val() || {};
             setTypingHint(!!typing.isTyping);
         });
 
-        visitorPresenceRef = firebase.database().ref(`presence/${conversation.id}/visitor`);
+        visitorPresenceRef = db.ref(`presence/${conversation.id}/visitor`);
         visitorPresenceRef.on('value', (snap) => {
             const presence = snap.val() || {};
             const onlineText = presence.isOnline ? 'en linea' : 'desconectado';
-            const name = conversation.visitorName || 'Visitante';
-            const contact = conversation.visitorContact || 'Sin contacto';
-            threadHeaderEl.textContent = `${name} · ${contact} · ${onlineText}`;
+            const name = selectedConversation ? selectedConversation.visitorName : 'Visitante';
+            const contact = selectedConversation ? selectedConversation.visitorContact : 'Sin contacto';
+            threadHeaderEl.textContent = `${name || 'Visitante'} · ${contact || 'Sin contacto'} · ${onlineText}`;
         });
 
-        adminTypingRef = firebase.database().ref(`typing/${conversation.id}/admin`);
-        adminPresenceRef = firebase.database().ref(`presence/${conversation.id}/admin`);
-        connectedRef = firebase.database().ref('.info/connected');
+        adminTypingRef = db.ref(`typing/${conversation.id}/admin`);
+        adminPresenceRef = db.ref(`presence/${conversation.id}/admin`);
+        connectedRef = db.ref('.info/connected');
         connectedRef.on('value', (snap) => {
             if (snap.val() !== true) return;
             adminPresenceRef.onDisconnect().set({
@@ -272,8 +276,6 @@
                 updatedAt: firebase.database.ServerValue.TIMESTAMP
             }).catch(() => {});
         });
-
-        watchConversations();
     }
 
     async function sendReply(event) {
@@ -298,8 +300,8 @@
         };
 
         try {
-            await firebase.database().ref(`messages/${selectedConversation.id}`).push(payload);
-            await firebase.database().ref(`conversations/${selectedConversation.id}`).update({
+            await db.ref(`messages/${selectedConversation.id}`).push(payload);
+            await db.ref(`conversations/${selectedConversation.id}`).update({
                 status: 'open',
                 updatedAt: firebase.database.ServerValue.TIMESTAMP,
                 updatedAtIso: nowIso,
@@ -315,6 +317,7 @@
             }
         } catch (error) {
             console.error('Error enviando respuesta admin:', error);
+            alert('No se pudo enviar. Revisa reglas de messages y connection.');
         } finally {
             sendBtn.disabled = false;
         }
@@ -327,7 +330,7 @@
         closeConversationBtn.disabled = true;
 
         try {
-            await firebase.database().ref(`conversations/${selectedConversation.id}`).update({
+            await db.ref(`conversations/${selectedConversation.id}`).update({
                 status: 'closed',
                 updatedAt: firebase.database.ServerValue.TIMESTAMP,
                 updatedAtIso: nowIso,
@@ -342,6 +345,7 @@
             }
         } catch (error) {
             console.error('Error cerrando conversacion:', error);
+            alert('No se pudo cerrar. Revisa reglas de conversations.');
         } finally {
             closeConversationBtn.disabled = false;
         }
@@ -350,12 +354,12 @@
     async function loginWithGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
         try {
-            await firebase.auth().signInWithPopup(provider);
+            await auth.signInWithPopup(provider);
         } catch (error) {
             console.error('Error login Google:', error);
             if (error && (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request')) {
                 try {
-                    await firebase.auth().signInWithRedirect(provider);
+                    await auth.signInWithRedirect(provider);
                 } catch (redirectError) {
                     console.error('Error login redirect Google:', redirectError);
                 }
@@ -365,7 +369,7 @@
 
     async function loginAnon() {
         try {
-            await firebase.auth().signInAnonymously();
+            await auth.signInAnonymously();
         } catch (error) {
             console.error('Error login anonimo:', error);
         }
@@ -373,7 +377,7 @@
 
     async function logout() {
         try {
-            await firebase.auth().signOut();
+            await auth.signOut();
         } catch (error) {
             console.error('Error al cerrar sesion:', error);
         }
@@ -393,6 +397,91 @@
             conversationsRef.off();
             conversationsRef = null;
         }
+    }
+
+    function normalizeTokenKey(token) {
+        return String(token || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
+
+    async function saveAdminPushToken(token) {
+        if (!activeUid || !token) return;
+        const tokenKey = normalizeTokenKey(token).slice(0, 160);
+        await db.ref(`admin_push_tokens/${activeUid}/${tokenKey}`).set({
+            token,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP,
+            userAgent: navigator.userAgent || ''
+        });
+    }
+
+    async function ensurePwaAndMessaging() {
+        if (!isAdmin) return;
+        if (!('serviceWorker' in navigator)) return;
+
+        try {
+            if (!swReg) {
+                swReg = await navigator.serviceWorker.register('./admin-sw.js');
+            }
+        } catch (error) {
+            console.error('No se pudo registrar admin-sw.js:', error);
+            return;
+        }
+
+        if (!firebase.messaging || !firebase.messaging.isSupported || !firebase.messaging.isSupported()) {
+            return;
+        }
+
+        if (!messaging) {
+            messaging = firebase.messaging();
+            messaging.useServiceWorker(swReg);
+            if (FCM_VAPID_PUBLIC_KEY && !FCM_VAPID_PUBLIC_KEY.startsWith('REEMPLAZA_')) {
+                messaging.usePublicVapidKey(FCM_VAPID_PUBLIC_KEY);
+            }
+            messaging.onMessage((payload) => {
+                const data = payload && payload.data ? payload.data : {};
+                const text = data.text || 'Nuevo mensaje del visitante';
+                if (!document.hidden) {
+                    const existing = threadMessagesEl.querySelector('.thread-empty');
+                    if (existing) return;
+                }
+                if ('Notification' in window && Notification.permission === 'granted') {
+                    new Notification('Nuevo chat recibido', {
+                        body: String(text).slice(0, 140),
+                        icon: 'favicon.png'
+                    });
+                }
+            });
+        }
+
+        try {
+            if ('Notification' in window && Notification.permission === 'default') {
+                await Notification.requestPermission();
+            }
+
+            if (Notification.permission !== 'granted') {
+                return;
+            }
+
+            const token = await messaging.getToken();
+            await saveAdminPushToken(token);
+        } catch (error) {
+            console.error('Error inicializando FCM admin:', error);
+        }
+    }
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        if (pwaInstallBtn) pwaInstallBtn.hidden = false;
+    });
+
+    if (pwaInstallBtn) {
+        pwaInstallBtn.addEventListener('click', async () => {
+            if (!deferredInstallPrompt) return;
+            deferredInstallPrompt.prompt();
+            await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            pwaInstallBtn.hidden = true;
+        });
     }
 
     googleBtn.addEventListener('click', loginWithGoogle);
@@ -435,7 +524,7 @@
         }
     });
 
-    firebase.auth().onAuthStateChanged(async (user) => {
+    auth.onAuthStateChanged(async (user) => {
         resetSessionView();
 
         if (!user) {
@@ -466,5 +555,6 @@
 
         setView('app');
         watchConversations();
+        ensurePwaAndMessaging();
     });
 })();
