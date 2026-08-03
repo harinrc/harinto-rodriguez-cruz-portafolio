@@ -3,6 +3,25 @@ const words = ["Computación y Telemática.", "Software y Sistemas.", "Redes y C
 let i = 0;
 let timer;
 
+const performanceProfile = (() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const cores = navigator.hardwareConcurrency || 4;
+    const hasDeviceMemory = typeof navigator.deviceMemory === 'number';
+    const memory = hasDeviceMemory ? navigator.deviceMemory : null;
+    const isLowEndDevice = cores <= 4 || (hasDeviceMemory && memory <= 4);
+
+    return {
+        prefersReducedMotion,
+        isLowEndDevice,
+        shouldReduceEffects: prefersReducedMotion || isLowEndDevice
+    };
+})();
+
+function applyPerformanceMode() {
+    const mode = performanceProfile.shouldReduceEffects ? 'low' : 'normal';
+    document.documentElement.setAttribute('data-performance', mode);
+}
+
 function initPcbBackground() {
     const canvas = document.getElementById('pcb-background');
     if (!canvas) return;
@@ -13,8 +32,11 @@ function initPcbBackground() {
     let tracks = [];
     let pulses = [];
     let animationFrameId;
-    const totalTracks = 45;
+    const totalTracks = performanceProfile.shouldReduceEffects ? 22 : 45;
+    const pulseSpawnThreshold = performanceProfile.shouldReduceEffects ? 0.65 : 0.2;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let lastFrameTime = 0;
+    let resizeTimer;
 
     const getThemeColor = (name) => {
         return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -52,7 +74,7 @@ function initPcbBackground() {
 
             tracks.push(points);
 
-            if (Math.random() > 0.2) {
+            if (Math.random() > pulseSpawnThreshold) {
                 pulses.push({
                     trackIndex,
                     segment: 0,
@@ -126,7 +148,7 @@ function initPcbBackground() {
         ctx.beginPath();
         ctx.arc(x, y, pulse.size, 0, Math.PI * 2);
         ctx.fillStyle = colors.pulseHot;
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = performanceProfile.shouldReduceEffects ? 6 : 12;
         ctx.shadowColor = colors.pulseCore;
         ctx.fill();
         ctx.shadowBlur = 0;
@@ -164,9 +186,14 @@ function initPcbBackground() {
         }
     }
 
-    const animate = () => {
-        renderFrame();
-        if (!prefersReducedMotion.matches) {
+    const animate = (timestamp = 0) => {
+        const minFrameTime = performanceProfile.shouldReduceEffects ? 33 : 16;
+        if ((timestamp - lastFrameTime) >= minFrameTime) {
+            renderFrame();
+            lastFrameTime = timestamp;
+        }
+
+        if (!prefersReducedMotion.matches && !document.hidden) {
             animationFrameId = window.requestAnimationFrame(animate);
         }
     };
@@ -175,13 +202,30 @@ function initPcbBackground() {
         if (animationFrameId) {
             window.cancelAnimationFrame(animationFrameId);
         }
+        lastFrameTime = 0;
         renderFrame();
-        if (!prefersReducedMotion.matches) {
+        if (!prefersReducedMotion.matches && !document.hidden) {
             animationFrameId = window.requestAnimationFrame(animate);
         }
     };
 
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', () => {
+        window.clearTimeout(resizeTimer);
+        resizeTimer = window.setTimeout(resizeCanvas, performanceProfile.shouldReduceEffects ? 180 : 90);
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden && animationFrameId) {
+            window.cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+            return;
+        }
+
+        if (!document.hidden) {
+            restartAnimation();
+        }
+    });
+
     prefersReducedMotion.addEventListener('change', restartAnimation);
 
     const themeObserver = new MutationObserver((mutations) => {
@@ -367,6 +411,7 @@ function initLoopingFooterTypewriter() {
 
 // Iniciar el efecto cuando cargue la página
 document.addEventListener("DOMContentLoaded", () => {
+    applyPerformanceMode();
     initPcbBackground();
     typingEffect();
     initSectionTypewriter();
@@ -389,6 +434,8 @@ function startProfileCarousel() {
     // Si no hay imágenes o solo hay una, no ejecuta el carrusel
     if (images.length <= 1) return;
 
+    const profileInterval = performanceProfile.shouldReduceEffects ? 7000 : 4000;
+
     setInterval(() => {
         // 1. Quita la clase 'active' de la imagen actual (empieza a desvanecerse)
         images[currentIndex].classList.remove('active');
@@ -398,7 +445,7 @@ function startProfileCarousel() {
 
         // 3. Añade la clase 'active' a la nueva imagen (aparece suavemente)
         images[currentIndex].classList.add('active');
-    }, 4000); // Cambia la foto cada 4 segundos (puedes ajustar este tiempo)
+    }, profileInterval); // Cambia la foto automáticamente
 }
 
 // 4. Portadas dinámicas en Hero con desvanecido cada 10s
@@ -416,11 +463,13 @@ function initHeroBackgroundSlider() {
 
     let currentIndex = 0;
 
+    const heroInterval = performanceProfile.shouldReduceEffects ? 14000 : 10000;
+
     window.setInterval(() => {
         slides[currentIndex].classList.remove('active');
         currentIndex = (currentIndex + 1) % slides.length;
         slides[currentIndex].classList.add('active');
-    }, 10000);
+    }, heroInterval);
 }
 
 // 5. Mini carruseles por proyecto (desvanecimiento cada 3 segundos)
@@ -441,7 +490,8 @@ function startProjectImageCarousels() {
 
         if (slides.length <= 1) return;
 
-        const slideInterval = Number(gallery.dataset.slideInterval) || 3000;
+        const baseInterval = Number(gallery.dataset.slideInterval) || 3000;
+        const slideInterval = performanceProfile.shouldReduceEffects ? Math.max(4300, baseInterval + 1300) : baseInterval;
         const dotsWrapper = document.createElement('div');
         dotsWrapper.className = 'project-dots';
         dotsWrapper.setAttribute('aria-label', 'Indicadores de imágenes del proyecto');
@@ -644,7 +694,7 @@ function initChatWidget() {
         scrollTimeout = setTimeout(() => {
             chatBtn.classList.remove('scroll-hide');
         }, 350);
-    });
+    }, { passive: true });
 
     // 🅱️ INTERACTIVIDAD: Abrir y Cerrar la ventana del Widget
     chatBtn.addEventListener('click', () => {
@@ -740,7 +790,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         galleryCarousel.scrollTo({
             left: targetCard.offsetLeft - galleryCarousel.offsetLeft,
-            behavior: 'smooth'
+            behavior: performanceProfile.shouldReduceEffects ? 'auto' : 'smooth'
         });
     };
 
@@ -769,7 +819,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             currentIndex = (currentIndex + 1) % galleryCards.length;
             scrollToCard(currentIndex);
-        }, 5200);
+        }, performanceProfile.shouldReduceEffects ? 7000 : 5200);
     };
 
     const stopAutoScroll = () => {

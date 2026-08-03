@@ -1720,7 +1720,8 @@ body::after {
 .project-card,
 .gallery-card {
     animation: cardNeonPulse 6s ease-in-out infinite;
-    overflow: hidden;
+    overflow: visible;
+    isolation: isolate;
 }
 
 .skill-card::after,
@@ -1858,6 +1859,7 @@ body::after {
 .skill-card:hover,
 .project-card:hover,
 .gallery-card:hover,
+.gallery-link:hover .gallery-card,
 .skill-card:focus-within,
 .project-card:focus-within,
 .gallery-card:focus-within,
@@ -1867,10 +1869,11 @@ body::after {
 .skill-card:active {
     border-color: rgba(248, 113, 113, 0.36);
     box-shadow:
-        0 0 0 1px rgba(248, 113, 113, 0.22),
-        0 0 18px rgba(248, 113, 113, 0.24),
-        0 0 44px rgba(220, 38, 38, 0.20),
+        0 0 0 1px rgba(248, 113, 113, 0.28),
+        0 0 26px rgba(248, 113, 113, 0.34),
+        0 0 68px rgba(220, 38, 38, 0.30),
         0 20px 42px rgba(2, 6, 23, 0.55);
+    filter: drop-shadow(0 0 16px rgba(248, 113, 113, 0.24));
     transform: translateY(-7px) scale(1.005);
 }
 
@@ -1924,6 +1927,77 @@ body::after {
     .gallery-card {
         animation-duration: 7.5s;
     }
+}
+
+/* ==========================================================================
+   MODO RENDIMIENTO (EQUIPOS DE GAMA BAJA)
+   ========================================================================== */
+html[data-performance="low"] * {
+    scroll-behavior: auto !important;
+}
+
+html[data-performance="low"] body::after {
+    opacity: 0.14;
+}
+
+html[data-performance="low"] .skill-card,
+html[data-performance="low"] .project-card,
+html[data-performance="low"] .gallery-card,
+html[data-performance="low"] .btn,
+html[data-performance="low"] .project-dot,
+html[data-performance="low"] .social-icons-horizontal a {
+    animation: none !important;
+}
+
+html[data-performance="low"] .skill-card,
+html[data-performance="low"] .project-card,
+html[data-performance="low"] .gallery-card,
+html[data-performance="low"] .project-img,
+html[data-performance="low"] .project-img.project-gallery,
+html[data-performance="low"] .project-dots,
+html[data-performance="low"] .chat-window {
+    backdrop-filter: none !important;
+}
+
+html[data-performance="low"] .skill-card,
+html[data-performance="low"] .project-card,
+html[data-performance="low"] .gallery-card {
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.36) !important;
+}
+
+html[data-performance="low"] .project-card:hover,
+html[data-performance="low"] .skill-card:hover,
+html[data-performance="low"] .gallery-card:hover,
+html[data-performance="low"] .gallery-link:hover .gallery-card,
+html[data-performance="low"] .btn:hover {
+    box-shadow:
+        0 0 0 1px rgba(248, 113, 113, 0.18),
+        0 0 10px rgba(248, 113, 113, 0.18),
+        0 10px 22px rgba(2, 6, 23, 0.38) !important;
+}
+
+html[data-performance="low"] .project-card:hover,
+html[data-performance="low"] .skill-card:hover,
+html[data-performance="low"] .gallery-card:hover,
+html[data-performance="low"] .gallery-link:hover .gallery-card {
+    filter: drop-shadow(0 0 8px rgba(248, 113, 113, 0.18));
+}
+
+html[data-performance="low"] .project-link i,
+html[data-performance="low"] .hero-buttons .btn i,
+html[data-performance="low"] .social-icons-horizontal a i {
+    filter: none !important;
+}
+
+html[data-performance="low"] .skill-card::before,
+html[data-performance="low"] .project-card::before,
+html[data-performance="low"] .gallery-card::before,
+html[data-performance="low"] .skill-card::after,
+html[data-performance="low"] .project-card::after,
+html[data-performance="low"] .gallery-card::after,
+html[data-performance="low"] .btn::before {
+    animation: none !important;
+    transition: none !important;
 }
 
 /* ==========================================================================
