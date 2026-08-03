@@ -939,6 +939,47 @@ function initChatWidget() {
         return activeConversationId;
     };
 
+    const buildConversationId = () => (
+        (window.crypto && window.crypto.randomUUID)
+            ? window.crypto.randomUUID()
+            : `c-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+    );
+
+    const resetActiveConversationState = () => {
+        activeConversationId = '';
+        window.localStorage.removeItem(CHAT_STORAGE_KEY);
+    };
+
+    const canRestoreStoredConversation = async () => {
+        if (!activeConversationId || typeof firebase === 'undefined') return false;
+
+        await authReadyPromise;
+        const visitorId = ensureVisitorId();
+        if (!visitorId) return false;
+
+        try {
+            const snap = await firebase.database().ref(`conversations/${activeConversationId}`).once('value');
+            if (!snap.exists()) {
+                resetActiveConversationState();
+                return false;
+            }
+
+            const conversation = snap.val() || {};
+            if (conversation.visitorId !== visitorId) {
+                resetActiveConversationState();
+                return false;
+            }
+
+            return true;
+        } catch (error) {
+            const code = String((error && error.code) || '').toLowerCase();
+            if (code.includes('permission_denied') || code.includes('permission-denied')) {
+                resetActiveConversationState();
+            }
+            return false;
+        }
+    };
+
     const formatClock = (timestamp) => {
         if (!timestamp) return '--:--';
         try {
@@ -997,7 +1038,7 @@ function initChatWidget() {
             activeProfile = { name, contact };
             window.localStorage.setItem(CHAT_PROFILE_KEY, JSON.stringify(activeProfile));
 
-            const conversationId = ensureConversationId();
+            const conversationId = buildConversationId();
             const nowIso = new Date().toISOString();
 
             const submitButton = chatForm.querySelector('button[type="submit"]');
@@ -1051,10 +1092,13 @@ function initChatWidget() {
                     fecha: new Date().toLocaleString('es-NI', { timeZone: 'America/Managua' })
                 }))
                 .then(() => {
+                activeConversationId = conversationId;
+                window.localStorage.setItem(CHAT_STORAGE_KEY, activeConversationId);
                 ensureVisitorMessaging(verifiedVisitorId);
                 mountConversationView(conversationId);
             }).catch((error) => {
                 console.error('Error al iniciar chat:', error);
+                resetActiveConversationState();
                 if (submitButton) submitButton.disabled = false;
             });
         });
@@ -1109,7 +1153,6 @@ function initChatWidget() {
                     updates[`messages/${conversationId}/${entry.id}/seenByVisitor`] = true;
                     updates[`messages/${conversationId}/${entry.id}/seenAtVisitor`] = nowIso;
                 });
-                updates[`conversations/${conversationId}/unreadForVisitor`] = 0;
                 firebase.database().ref().update(updates).catch(() => {});
 
                 const latest = adminUnread[adminUnread.length - 1];
@@ -1162,7 +1205,7 @@ function initChatWidget() {
 
         const visitorId = ensureVisitorId();
         ensureVisitorMessaging(visitorId);
-        const connectedRef = firebase.database().ref('.info/connected');
+        connectedRef = firebase.database().ref('.info/connected');
         visitorPresenceRef = firebase.database().ref(`presence/${conversationId}/visitor`);
         connectedRef.on('value', (snap) => {
             if (snap.val() !== true) return;
@@ -1303,10 +1346,10 @@ function initChatWidget() {
         });
     }
 
-    authReadyPromise.finally(() => {
+    authReadyPromise.finally(async () => {
         if (!activeVisitorId) ensureVisitorId();
 
-        if (activeConversationId && typeof firebase !== 'undefined') {
+        if (await canRestoreStoredConversation()) {
             mountConversationView(activeConversationId);
             return;
         }
