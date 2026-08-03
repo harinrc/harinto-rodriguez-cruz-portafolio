@@ -670,93 +670,364 @@ document.addEventListener("DOMContentLoaded", () => {
 // 1. CONFIGURACIÓN Y CONTROL DEL WIDGET DE CHAT INTERACTIVO
 // ==========================================================================
 function initChatWidget() {
-    // Captura de los elementos del DOM
     const chatBtn = document.getElementById('chat-floating-btn');
     const chatWindow = document.getElementById('chat-window');
     const closeBtn = document.getElementById('close-chat-btn');
-    const chatForm = document.getElementById('chat-contact-form');
     const chatBody = document.getElementById('chat-body');
+    const badge = chatBtn ? chatBtn.querySelector('.chat-badge') : null;
 
-    // Control de seguridad por si acaso no existen los ID en el HTML
-    if (!chatBtn || !chatWindow) return; 
+    if (!chatBtn || !chatWindow || !chatBody) return;
+
+    const CHAT_STORAGE_KEY = 'harinrc_chat_conversation_v1';
+    const CHAT_VISITOR_KEY = 'harinrc_chat_visitor_v1';
+    const CHAT_PROFILE_KEY = 'harinrc_chat_profile_v1';
+    const MAX_MESSAGE_LENGTH = 420;
 
     let scrollTimeout;
+    let activeConversationId = window.localStorage.getItem(CHAT_STORAGE_KEY) || '';
+    let activeVisitorId = window.localStorage.getItem(CHAT_VISITOR_KEY) || '';
+    let activeProfile = { name: '', contact: '' };
+    let messagesRef = null;
+    let lastSendAt = 0;
+    let currentAuthUid = '';
 
-    // 🅰️ LÓGICA DEL SCROLL: Ocultar al deslizar y aparecer al detenerse
+    const getAuthUid = () => {
+        if (typeof firebase === 'undefined' || typeof firebase.auth !== 'function') return '';
+        const currentUser = firebase.auth().currentUser;
+        return currentUser && currentUser.uid ? currentUser.uid : '';
+    };
+
+    const authReadyPromise = (() => {
+        if (typeof firebase === 'undefined' || typeof firebase.auth !== 'function') {
+            return Promise.resolve(null);
+        }
+
+        return firebase.auth().signInAnonymously()
+            .then((credential) => {
+                currentAuthUid = (credential && credential.user && credential.user.uid) ? credential.user.uid : getAuthUid();
+
+                firebase.auth().onAuthStateChanged((user) => {
+                    currentAuthUid = user && user.uid ? user.uid : '';
+                });
+
+                return credential;
+            })
+            .catch((error) => {
+                console.error('No se pudo iniciar sesión anónima en Firebase Auth:', error);
+                return null;
+            });
+    })();
+
+    try {
+        const rawProfile = window.localStorage.getItem(CHAT_PROFILE_KEY);
+        if (rawProfile) {
+            const parsedProfile = JSON.parse(rawProfile);
+            activeProfile.name = String(parsedProfile.name || '');
+            activeProfile.contact = String(parsedProfile.contact || '');
+        }
+    } catch (_error) {
+        activeProfile = { name: '', contact: '' };
+    }
+
+    const sanitizeText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+
+    const ensureVisitorId = () => {
+        const authUid = currentAuthUid || getAuthUid();
+        if (authUid) {
+            activeVisitorId = authUid;
+            window.localStorage.setItem(CHAT_VISITOR_KEY, activeVisitorId);
+            return activeVisitorId;
+        }
+
+        if (activeVisitorId) return activeVisitorId;
+        const randomId = (window.crypto && window.crypto.randomUUID)
+            ? window.crypto.randomUUID()
+            : `v-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        activeVisitorId = randomId;
+        window.localStorage.setItem(CHAT_VISITOR_KEY, activeVisitorId);
+        return activeVisitorId;
+    };
+
+    const ensureConversationId = () => {
+        if (activeConversationId) return activeConversationId;
+        const randomId = (window.crypto && window.crypto.randomUUID)
+            ? window.crypto.randomUUID()
+            : `c-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        activeConversationId = randomId;
+        window.localStorage.setItem(CHAT_STORAGE_KEY, activeConversationId);
+        return activeConversationId;
+    };
+
+    const formatClock = (timestamp) => {
+        if (!timestamp) return '--:--';
+        try {
+            return new Date(timestamp).toLocaleTimeString('es-NI', {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'America/Managua'
+            });
+        } catch (_error) {
+            return '--:--';
+        }
+    };
+
+    const renderEntryForm = () => {
+        chatBody.innerHTML = `
+            <p class="chat-welcome">👋 ¡Hola! Déjame tus datos para abrir el chat y responderte en tiempo real.</p>
+            <form id="chat-contact-form">
+                <div class="chat-input-group">
+                    <label><i class="fas fa-user"></i> Nombre</label>
+                    <input type="text" id="chat-name" required maxlength="70" placeholder="Tu nombre o empresa" value="${activeProfile.name.replace(/"/g, '&quot;')}">
+                </div>
+                <div class="chat-input-group">
+                    <label><i class="fas fa-envelope"></i> Correo o Teléfono</label>
+                    <input type="text" id="chat-contact" required maxlength="100" placeholder="Ej: nombre@correo.com o celular" value="${activeProfile.contact.replace(/"/g, '&quot;')}">
+                </div>
+                <div class="chat-input-group">
+                    <label><i class="fas fa-code"></i> Primer mensaje</label>
+                    <textarea id="chat-message" required maxlength="${MAX_MESSAGE_LENGTH}" placeholder="Describe brevemente lo que necesitas..."></textarea>
+                </div>
+                <button type="submit" class="chat-submit-btn">Iniciar Chat</button>
+            </form>
+        `;
+
+        const chatForm = document.getElementById('chat-contact-form');
+        if (!chatForm) return;
+
+        chatForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const nameInput = document.getElementById('chat-name');
+            const contactInput = document.getElementById('chat-contact');
+            const messageInput = document.getElementById('chat-message');
+
+            if (!nameInput || !contactInput || !messageInput) return;
+            if (typeof firebase === 'undefined') {
+                console.error('Firebase no está disponible en el cliente.');
+                return;
+            }
+
+            const name = sanitizeText(nameInput.value);
+            const contact = sanitizeText(contactInput.value);
+            const message = sanitizeText(messageInput.value).slice(0, MAX_MESSAGE_LENGTH);
+
+            if (!name || !contact || !message) return;
+
+            activeProfile = { name, contact };
+            window.localStorage.setItem(CHAT_PROFILE_KEY, JSON.stringify(activeProfile));
+
+            const conversationId = ensureConversationId();
+            const nowIso = new Date().toISOString();
+
+            const submitButton = chatForm.querySelector('button[type="submit"]');
+            if (submitButton) submitButton.disabled = true;
+
+            await authReadyPromise;
+            const verifiedVisitorId = ensureVisitorId();
+            if (!verifiedVisitorId) {
+                if (submitButton) submitButton.disabled = false;
+                console.error('No fue posible autenticar visitante para iniciar el chat.');
+                return;
+            }
+
+            const conversationPayload = {
+                conversationId,
+                visitorId: verifiedVisitorId,
+                visitorName: name,
+                visitorContact: contact,
+                status: 'open',
+                source: 'web_portfolio_widget',
+                createdAtIso: nowIso,
+                updatedAtIso: nowIso,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                lastMessage: message
+            };
+
+            const messagePayload = {
+                senderType: 'visitor',
+                text: message,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                createdAtIso: nowIso,
+                visitorId: verifiedVisitorId,
+                conversationId
+            };
+
+            firebase.database().ref(`conversations/${conversationId}`).set(conversationPayload)
+                .then(() => firebase.database().ref(`messages/${conversationId}`).push(messagePayload))
+                .then(() => firebase.database().ref('mensajes_contacto').push({
+                    nombre: name,
+                    contacto: contact,
+                    mensaje: message,
+                    conversationId,
+                    fecha: new Date().toLocaleString('es-NI', { timeZone: 'America/Managua' })
+                }))
+                .then(() => {
+                mountConversationView(conversationId);
+            }).catch((error) => {
+                console.error('Error al iniciar chat:', error);
+                if (submitButton) submitButton.disabled = false;
+            });
+        });
+    };
+
+    const renderMessages = (messagesList = []) => {
+        const thread = document.getElementById('chat-thread');
+        if (!thread) return;
+
+        if (!messagesList.length) {
+            thread.innerHTML = '<p class="chat-empty">Aun no hay mensajes. Escribe para iniciar la conversacion.</p>';
+            return;
+        }
+
+        thread.innerHTML = messagesList.map((entry) => {
+            const isVisitor = entry.senderType !== 'admin';
+            const sideClass = isVisitor ? 'visitor' : 'admin';
+            const safeText = String(entry.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+            return `
+                <div class="chat-message ${sideClass}">
+                    <div class="chat-message-bubble">${safeText}</div>
+                    <span class="chat-message-time">${formatClock(entry.createdAt)}</span>
+                </div>
+            `;
+        }).join('');
+
+        thread.scrollTop = thread.scrollHeight;
+    };
+
+    const subscribeConversationMessages = (conversationId) => {
+        if (messagesRef) {
+            messagesRef.off();
+        }
+
+        messagesRef = firebase.database().ref(`messages/${conversationId}`).limitToLast(80);
+        messagesRef.on('value', (snapshot) => {
+            const rawMessages = snapshot.val() || {};
+            const list = Object.keys(rawMessages)
+                .map((key) => ({ id: key, ...rawMessages[key] }))
+                .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+            renderMessages(list);
+        }, (error) => {
+            const errorCode = error && error.code ? String(error.code).toLowerCase() : '';
+            if (!errorCode.includes('permission_denied')) {
+                console.error('Error al leer mensajes del chat:', error);
+                return;
+            }
+
+            if (messagesRef) {
+                messagesRef.off();
+                messagesRef = null;
+            }
+
+            activeConversationId = '';
+            window.localStorage.removeItem(CHAT_STORAGE_KEY);
+            renderEntryForm();
+        });
+    };
+
+    const mountConversationView = (conversationId) => {
+        chatBody.innerHTML = `
+            <p class="chat-welcome">💬 Chat activo. Este historial se mantiene para este navegador.</p>
+            <div id="chat-thread" class="chat-thread" aria-live="polite"></div>
+            <form id="chat-live-form" class="chat-live-form">
+                <div class="chat-input-group">
+                    <label><i class="fas fa-paper-plane"></i> Mensaje</label>
+                    <textarea id="chat-live-message" maxlength="${MAX_MESSAGE_LENGTH}" required placeholder="Escribe tu mensaje..."></textarea>
+                </div>
+                <button type="submit" class="chat-submit-btn">Enviar Mensaje</button>
+            </form>
+        `;
+
+        const liveForm = document.getElementById('chat-live-form');
+        const liveMessage = document.getElementById('chat-live-message');
+        if (!liveForm || !liveMessage) return;
+
+        subscribeConversationMessages(conversationId);
+
+        liveForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            if (typeof firebase === 'undefined') return;
+
+            const now = Date.now();
+            if (now - lastSendAt < 900) return;
+
+            const text = sanitizeText(liveMessage.value).slice(0, MAX_MESSAGE_LENGTH);
+            if (!text) return;
+
+            lastSendAt = now;
+            const nowIso = new Date().toISOString();
+
+            const sendButton = liveForm.querySelector('button[type="submit"]');
+            if (sendButton) sendButton.disabled = true;
+
+            await authReadyPromise;
+            const verifiedVisitorId = ensureVisitorId();
+            if (!verifiedVisitorId) {
+                if (sendButton) sendButton.disabled = false;
+                console.error('No fue posible autenticar visitante para enviar mensajes.');
+                return;
+            }
+
+            const payload = {
+                senderType: 'visitor',
+                text,
+                visitorId: verifiedVisitorId,
+                conversationId,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                createdAtIso: nowIso
+            };
+
+            Promise.all([
+                firebase.database().ref(`messages/${conversationId}`).push(payload),
+                firebase.database().ref(`conversations/${conversationId}`).update({
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                    updatedAtIso: nowIso,
+                    lastMessage: text,
+                    status: 'open'
+                })
+            ]).then(() => {
+                liveMessage.value = '';
+                if (sendButton) sendButton.disabled = false;
+            }).catch((error) => {
+                console.error('Error al enviar mensaje:', error);
+                if (sendButton) sendButton.disabled = false;
+            });
+        });
+    };
+
     window.addEventListener('scroll', () => {
-        // Añade la clase CSS que vuelve invisible el botón
         chatBtn.classList.add('scroll-hide');
-
-        // Limpia el temporizador mientras la pantalla se siga moviendo
         window.clearTimeout(scrollTimeout);
-
-        // Cuando el usuario deja de deslizar por 350ms, el botón reaparece
         scrollTimeout = setTimeout(() => {
             chatBtn.classList.remove('scroll-hide');
         }, 350);
     }, { passive: true });
 
-    // 🅱️ INTERACTIVIDAD: Abrir y Cerrar la ventana del Widget
     chatBtn.addEventListener('click', () => {
         const isHidden = chatWindow.classList.toggle('hidden');
         document.body.classList.toggle('chat-open', !isHidden);
-
-        const badge = chatBtn.querySelector('.chat-badge');
         if (badge) badge.style.display = !isHidden ? 'none' : 'flex';
     });
 
-    // Cerrar el chat desde la 'X' del encabezado
-    closeBtn.addEventListener('click', () => {
-        chatWindow.classList.add('hidden');
-        document.body.classList.remove('chat-open');
-        const badge = chatBtn.querySelector('.chat-badge');
-        if (badge) badge.style.display = 'flex';
-    });
-
-    // 💡 ENVÍO DE DATOS DIRECTO A FIREBASE (Sintaxis Clásica v8)
-    if (chatForm) {
-        chatForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-
-            // Capturamos lo que escribió el cliente
-            const name = document.getElementById('chat-name').value;
-            const contact = document.getElementById('chat-contact').value;
-            const message = document.getElementById('chat-message').value;
-
-            // Validación para asegurar que Firebase existe antes de empujar los datos
-            if (typeof firebase !== 'undefined') {
-                // Guarda la información en el nodo 'mensajes_contacto'
-                firebase.database().ref('mensajes_contacto').push({
-                    nombre: name,
-                    contacto: contact,
-                    mensaje: message,
-                    fecha: new Date().toLocaleString("es-NI", { timeZone: "America/Managua" }) // Hora de Nicaragua
-                })
-                .then(() => {
-                    console.log("¡Datos guardados con éxito en la consola de Firebase!");
-                })
-                .catch((error) => {
-                    console.error("Error directo de Firebase: ", error);
-                });
-            } else {
-                console.error("Error: Firebase no está cargado en el HTML.");
-            }
-
-            // Animación y mensaje visual de éxito en la interfaz del usuario
-            chatBody.innerHTML = `
-                <div style="text-align: center; padding: 40px 10px;">
-                    <i class="fas fa-check-circle" style="color: #10b981; font-size: 50px; margin-bottom: 15px;"></i>
-                    <h5 style="font-size: 16px; margin-bottom: 10px; color: #ffffff;">¡Mensaje Recibido!</h5>
-                    <p style="font-size: 13px; color: #a3a3a3; line-height: 1.6;">Gracias <strong>${name}</strong>, tus datos se guardaron en el servidor. Me pondré en contacto contigo muy pronto.</p>
-                </div>
-            `;
-
-            // Auto-cerrar el panel del chat limpiamente tras 3.5 segundos
-            setTimeout(() => {
-                chatWindow.classList.add('hidden');
-            }, 3500);
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            chatWindow.classList.add('hidden');
+            document.body.classList.remove('chat-open');
+            if (badge) badge.style.display = 'flex';
         });
     }
+
+    authReadyPromise.finally(() => {
+        if (!activeVisitorId) ensureVisitorId();
+
+        if (activeConversationId && typeof firebase !== 'undefined') {
+            mountConversationView(activeConversationId);
+            return;
+        }
+
+        renderEntryForm();
+    });
 }
 
 // ==========================================================================
