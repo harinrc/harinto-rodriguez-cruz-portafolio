@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Panel Admin Chat | HarinRC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Exo+2:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="admin-chat.css">
+</head>
+<body>
+    <main class="admin-shell">
+        <header class="admin-topbar">
+            <h1><span>Harin</span>RC Admin Chat</h1>
+            <div class="admin-topbar-actions">
+                <span id="admin-auth-state" class="admin-auth-state">Sin sesion</span>
+                <button id="admin-logout-btn" class="admin-btn ghost" type="button" hidden>Cerrar sesion</button>
+            </div>
+        </header>
+
+        <section id="admin-login" class="admin-panel">
+            <h2>Acceso Admin</h2>
+            <p>Inicia sesion con Google para responder chats desde tu telefono o PC.</p>
+            <div class="admin-login-actions">
+                <button id="admin-google-btn" class="admin-btn primary" type="button"><i class="fa-brands fa-google"></i> Ingresar con Google</button>
+                <button id="admin-anon-btn" class="admin-btn secondary" type="button">Ingresar anonimo (solo prueba)</button>
+            </div>
+            <p class="admin-help">Debes tener tu UID en <strong>admins/{uid}: true</strong> dentro de Realtime Database.</p>
+        </section>
+
+        <section id="admin-unauthorized" class="admin-panel" hidden>
+            <h2>Sin permisos de admin</h2>
+            <p>Este usuario no esta autorizado para gestionar conversaciones.</p>
+            <div class="uid-box">
+                <code id="admin-current-uid">UID no disponible</code>
+                <button id="copy-uid-btn" class="admin-btn ghost" type="button">Copiar UID</button>
+            </div>
+            <p class="admin-help">Agrega ese UID en <strong>admins/{uid}: true</strong> y recarga la pagina.</p>
+        </section>
+
+        <section id="admin-app" class="admin-app" hidden>
+            <aside class="admin-conversations">
+                <div class="admin-section-title">Conversaciones</div>
+                <div id="admin-conversations-list" class="admin-conversations-list"></div>
+            </aside>
+
+            <section class="admin-thread">
+                <div id="admin-thread-header" class="admin-thread-header">Selecciona una conversacion</div>
+                <div id="admin-thread-messages" class="admin-thread-messages">
+                    <p class="thread-empty">No hay conversacion seleccionada.</p>
+                </div>
+                <form id="admin-reply-form" class="admin-reply-form">
+                    <textarea id="admin-reply-input" maxlength="420" placeholder="Escribe una respuesta..."></textarea>
+                    <div class="admin-reply-actions">
+                        <button id="admin-close-conversation-btn" type="button" class="admin-btn ghost" disabled>Cerrar chat</button>
+                        <button id="admin-send-btn" type="submit" class="admin-btn primary" disabled>Enviar</button>
+                    </div>
+                </form>
+            </section>
+        </section>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyBlDIPX-Tzj3uJ3xoPboBwhfeRCxVa0rQc",
+        authDomain: "portafolio-harin.firebaseapp.com",
+        databaseURL: "https://portafolio-harin-default-rtdb.firebaseio.com",
+        projectId: "portafolio-harin",
+        storageBucket: "portafolio-harin.firebasestorage.app",
+        messagingSenderId: "754750655831",
+        appId: "1:754750655831:web:3cbfb1a695c7ee39838212"
+      };
+
+      if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+      }
+    </script>
+    <script src="admin-chat.js"></script>
+</body>
+</html>
