@@ -697,6 +697,7 @@ function initChatWidget() {
     let visitorSwReg = null;
     let lastSendAt = 0;
     let currentAuthUid = '';
+    let authInitError = null;
     let unreadAdminCount = 0;
     let notificationPermissionRequested = false;
     const VISITOR_VAPID_PUBLIC_KEY = 'REEMPLAZA_CON_TU_VAPID_KEY_PUBLICA';
@@ -714,6 +715,7 @@ function initChatWidget() {
 
         return firebase.auth().signInAnonymously()
             .then((credential) => {
+                authInitError = null;
                 currentAuthUid = (credential && credential.user && credential.user.uid) ? credential.user.uid : getAuthUid();
 
                 firebase.auth().onAuthStateChanged((user) => {
@@ -723,10 +725,27 @@ function initChatWidget() {
                 return credential;
             })
             .catch((error) => {
+                authInitError = error || null;
                 console.error('No se pudo iniciar sesión anónima en Firebase Auth:', error);
                 return null;
             });
     })();
+
+    const ensureAuthenticatedVisitorUid = async () => {
+        await authReadyPromise;
+        const authUid = getAuthUid() || currentAuthUid;
+        if (authUid) {
+            currentAuthUid = authUid;
+            activeVisitorId = authUid;
+            window.localStorage.setItem(CHAT_VISITOR_KEY, activeVisitorId);
+            return authUid;
+        }
+
+        const detail = authInitError && authInitError.code
+            ? ` (${authInitError.code})`
+            : '';
+        throw new Error(`No hay sesión anónima de Firebase Auth${detail}`);
+    };
 
     try {
         const rawProfile = window.localStorage.getItem(CHAT_PROFILE_KEY);
@@ -1003,11 +1022,13 @@ function initChatWidget() {
             const submitButton = chatForm.querySelector('button[type="submit"]');
             if (submitButton) submitButton.disabled = true;
 
-            await authReadyPromise;
-            const verifiedVisitorId = ensureVisitorId();
-            if (!verifiedVisitorId) {
+            let verifiedVisitorId = '';
+            try {
+                verifiedVisitorId = await ensureAuthenticatedVisitorUid();
+            } catch (authError) {
                 if (submitButton) submitButton.disabled = false;
-                console.error('No fue posible autenticar visitante para iniciar el chat.');
+                console.error('No fue posible autenticar visitante para iniciar el chat:', authError);
+                alert('No se pudo iniciar el chat porque Firebase Auth no está lista. Activa Authentication > Sign-in method > Anonymous y vuelve a intentar.');
                 return;
             }
 
@@ -1059,6 +1080,9 @@ function initChatWidget() {
                 mountConversationView(conversationId);
             }).catch((error) => {
                 console.error('Error al iniciar chat:', error);
+                if (error && String(error.code || '').toLowerCase().includes('permission_denied')) {
+                    alert('Firebase rechazó el guardado por reglas (permission_denied). Verifica que las reglas publicadas sean las nuevas y que Anonymous Auth esté activo.');
+                }
                 if (submitButton) submitButton.disabled = false;
             });
         });
@@ -1240,11 +1264,13 @@ function initChatWidget() {
             const sendButton = liveForm.querySelector('button[type="submit"]');
             if (sendButton) sendButton.disabled = true;
 
-            await authReadyPromise;
-            const verifiedVisitorId = ensureVisitorId();
-            if (!verifiedVisitorId) {
+            let verifiedVisitorId = '';
+            try {
+                verifiedVisitorId = await ensureAuthenticatedVisitorUid();
+            } catch (authError) {
                 if (sendButton) sendButton.disabled = false;
-                console.error('No fue posible autenticar visitante para enviar mensajes.');
+                console.error('No fue posible autenticar visitante para enviar mensajes:', authError);
+                alert('No se pudo enviar porque Firebase Auth no está lista. Activa Authentication > Sign-in method > Anonymous y vuelve a intentar.');
                 return;
             }
 
@@ -1277,6 +1303,9 @@ function initChatWidget() {
                 if (sendButton) sendButton.disabled = false;
             }).catch((error) => {
                 console.error('Error al enviar mensaje:', error);
+                if (error && String(error.code || '').toLowerCase().includes('permission_denied')) {
+                    alert('Firebase rechazó el mensaje por reglas (permission_denied). Verifica reglas publicadas y sesión anónima activa.');
+                }
                 if (sendButton) sendButton.disabled = false;
             });
         });
