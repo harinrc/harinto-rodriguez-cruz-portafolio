@@ -1041,9 +1041,6 @@ function initChatWidget() {
             activeProfile = { name, contact };
             window.localStorage.setItem(CHAT_PROFILE_KEY, JSON.stringify(activeProfile));
 
-            const conversationId = ensureConversationId();
-            const nowIso = new Date().toISOString();
-
             const submitButton = chatForm.querySelector('button[type="submit"]');
             if (submitButton) submitButton.disabled = true;
 
@@ -1057,59 +1054,81 @@ function initChatWidget() {
                 return;
             }
 
-            const conversationPayload = {
-                conversationId,
-                visitorId: verifiedVisitorId,
-                visitorName: name,
-                visitorContact: contact,
-                status: 'open',
-                source: 'web_portfolio_widget',
-                createdAtIso: nowIso,
-                updatedAtIso: nowIso,
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                lastMessage: '',
-                unreadForAdmin: 0,
-                unreadForVisitor: 0
-            };
+            const startConversationFlow = async (resetConversationId) => {
+                if (resetConversationId) {
+                    activeConversationId = '';
+                    window.localStorage.removeItem(CHAT_STORAGE_KEY);
+                }
 
-            const messagePayload = {
-                senderType: 'visitor',
-                text: message,
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                createdAtIso: nowIso,
-                visitorId: verifiedVisitorId,
-                conversationId,
-                seenByAdmin: false,
-                seenByVisitor: true
-            };
+                const conversationId = ensureConversationId();
+                const nowIso = new Date().toISOString();
 
-            db.ref(`conversations/${conversationId}`).set(conversationPayload)
-                .then(() => db.ref(`messages/${conversationId}`).push(messagePayload))
-                .then(() => db.ref(`conversations/${conversationId}`).update({
+                const conversationPayload = {
+                    conversationId,
+                    visitorId: verifiedVisitorId,
+                    visitorName: name,
+                    visitorContact: contact,
+                    status: 'open',
+                    source: 'web_portfolio_widget',
+                    createdAtIso: nowIso,
+                    updatedAtIso: nowIso,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                    lastMessage: '',
+                    unreadForAdmin: 0,
+                    unreadForVisitor: 0
+                };
+
+                const messagePayload = {
+                    senderType: 'visitor',
+                    text: message,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP,
+                    createdAtIso: nowIso,
+                    visitorId: verifiedVisitorId,
+                    conversationId,
+                    seenByAdmin: false,
+                    seenByVisitor: true
+                };
+
+                await db.ref(`conversations/${conversationId}`).set(conversationPayload);
+                await db.ref(`messages/${conversationId}`).push(messagePayload);
+                await db.ref(`conversations/${conversationId}`).update({
                     lastMessage: message,
                     status: 'open',
                     updatedAt: firebase.database.ServerValue.TIMESTAMP,
                     updatedAtIso: nowIso,
                     unreadForAdmin: firebase.database.ServerValue.increment(1)
-                }))
-                .then(() => db.ref('mensajes_contacto').push({
+                });
+                await db.ref('mensajes_contacto').push({
                     nombre: name,
                     contacto: contact,
                     mensaje: message,
                     conversationId,
                     fecha: new Date().toLocaleString('es-NI', { timeZone: 'America/Managua' })
-                }))
-                .then(() => {
+                });
+
+                return conversationId;
+            };
+
+            try {
+                let conversationId;
+                try {
+                    conversationId = await startConversationFlow(false);
+                } catch (firstError) {
+                    const code = String((firstError && firstError.code) || '').toLowerCase();
+                    if (!code.includes('permission_denied')) throw firstError;
+                    conversationId = await startConversationFlow(true);
+                }
+
                 ensureVisitorMessaging(verifiedVisitorId);
                 mountConversationView(conversationId);
-            }).catch((error) => {
+            } catch (error) {
                 console.error('Error al iniciar chat:', error);
                 if (error && String(error.code || '').toLowerCase().includes('permission_denied')) {
-                    alert('Firebase rechazó el guardado por reglas (permission_denied). Verifica que las reglas publicadas sean las nuevas y que Anonymous Auth esté activo.');
+                    alert('Firebase rechazó el guardado por reglas (permission_denied). Se intentó crear un chat nuevo automáticamente. Verifica reglas publicadas y Anonymous Auth activo.');
                 }
                 if (submitButton) submitButton.disabled = false;
-            });
+            }
         });
     };
 
