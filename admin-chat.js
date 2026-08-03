@@ -148,6 +148,7 @@
         threadHeaderEl.textContent = `${conversation.visitorName || 'Visitante'} · ${conversation.visitorContact || 'Sin contacto'}`;
         sendBtn.disabled = false;
         closeConversationBtn.disabled = false;
+        threadMessagesEl.innerHTML = '<p class="thread-empty">Cargando mensajes...</p>';
 
         if (messagesRef) {
             messagesRef.off();
@@ -162,6 +163,7 @@
             renderMessages(messages);
         }, (error) => {
             console.error('Error leyendo mensajes:', error);
+            threadMessagesEl.innerHTML = '<p class="thread-empty">No se pudieron cargar los mensajes de esta conversacion.</p>';
         });
 
         watchConversations();

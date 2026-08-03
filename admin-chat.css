@@ -151,6 +151,7 @@ body {
     border: 1px solid var(--line);
     border-radius: 14px;
     background: var(--card);
+    overflow: hidden;
 }
 
 .admin-section-title,
@@ -175,11 +176,14 @@ body {
     padding: 12px 14px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
     cursor: pointer;
+    transition: background 0.2s ease, border-left-color 0.2s ease;
+    border-left: 3px solid transparent;
 }
 
 .conversation-item:hover,
 .conversation-item.active {
-    background: linear-gradient(130deg, rgba(220, 38, 38, 0.18), rgba(255, 255, 255, 0.02));
+    background: linear-gradient(130deg, rgba(220, 38, 38, 0.16), rgba(255, 255, 255, 0.03));
+    border-left-color: rgba(248, 113, 113, 0.76);
 }
 
 .conversation-title {
@@ -206,6 +210,12 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    background:
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        radial-gradient(circle at 18% 12%, rgba(220, 38, 38, 0.08), transparent 40%),
+        rgba(10, 16, 29, 0.52);
+    background-size: 40px 40px, 40px 40px, auto, auto;
 }
 
 .msg-row {
@@ -224,21 +234,48 @@ body {
 }
 
 .msg-bubble {
-    border-radius: 12px;
+    border-radius: 14px;
     padding: 9px 11px;
     border: 1px solid rgba(255, 255, 255, 0.08);
     font-size: 0.92rem;
     line-height: 1.45;
     word-wrap: break-word;
+    box-shadow: 0 6px 14px rgba(2, 6, 23, 0.30);
+    position: relative;
 }
 
 .msg-row.visitor .msg-bubble {
-    background: rgba(255, 255, 255, 0.04);
+    background: linear-gradient(140deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
 }
 
 .msg-row.admin .msg-bubble {
-    background: linear-gradient(135deg, rgba(220, 38, 38, 0.30), rgba(220, 38, 38, 0.14));
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.36), rgba(220, 38, 38, 0.18));
     border-color: rgba(248, 113, 113, 0.30);
+}
+
+.msg-row.visitor .msg-bubble::before,
+.msg-row.admin .msg-bubble::before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    width: 10px;
+    height: 10px;
+    transform: rotate(45deg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.msg-row.visitor .msg-bubble::before {
+    left: -6px;
+    background: rgba(255, 255, 255, 0.06);
+    border-top: 0;
+    border-right: 0;
+}
+
+.msg-row.admin .msg-bubble::before {
+    right: -6px;
+    background: rgba(220, 38, 38, 0.30);
+    border-bottom: 0;
+    border-left: 0;
 }
 
 .msg-meta {
