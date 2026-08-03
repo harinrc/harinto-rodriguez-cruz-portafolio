@@ -12,66 +12,125 @@
     },
 
     "conversations": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      ".indexOn": ["updatedAt"],
       "$conversationId": {
-        ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || data.child('visitorId').val() === auth.uid)",
-        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!data.exists() && newData.child('visitorId').val() === auth.uid) || (data.exists() && data.child('visitorId').val() === auth.uid))",
+        ".read": "auth != null && (data.child('visitorId').val() === auth.uid || root.child('admins').child(auth.uid).val() === true)",
+        ".write": "auth != null && ((!data.exists() && newData.child('visitorId').val() === auth.uid) || (data.exists() && (data.child('visitorId').val() === auth.uid || root.child('admins').child(auth.uid).val() === true)))",
+        "conversationId": {
+          ".validate": "!newData.exists() || (newData.isString() && newData.val() === $conversationId)"
+        },
         "visitorId": {
-          ".validate": "newData.isString()"
+          ".validate": "!newData.exists() || (newData.isString() && (newData.val() === auth.uid || (data.exists() && newData.val() === data.val())))"
         },
         "visitorName": {
-          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 100)"
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0 && newData.val().length <= 70)"
         },
         "visitorContact": {
-          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 120)"
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0 && newData.val().length <= 100)"
         },
         "status": {
           ".validate": "!newData.exists() || (newData.isString() && (newData.val() === 'open' || newData.val() === 'closed'))"
         },
+        "source": {
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 60)"
+        },
+        "createdAtIso": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "updatedAtIso": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "createdAt": {
+          ".validate": "!newData.exists() || newData.isNumber()"
+        },
+        "updatedAt": {
+          ".validate": "!newData.exists() || newData.isNumber()"
+        },
         "lastMessage": {
           ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 420)"
+        },
+        "unreadForAdmin": {
+          ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0)"
+        },
+        "unreadForVisitor": {
+          ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0)"
+        },
+        "$other": {
+          ".validate": false
         }
       }
     },
 
     "messages": {
       "$conversationId": {
-        ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid)",
-        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+        ".read": "auth != null && (root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid || root.child('admins').child(auth.uid).val() === true)",
+        ".indexOn": ["createdAt"],
         "$messageId": {
-          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid)",
-          ".validate": "!newData.exists() || (newData.hasChildren(['senderType','text','createdAt']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 420 && (newData.child('senderType').val() === 'visitor' || newData.child('senderType').val() === 'admin'))"
+          ".write": "auth != null && ((newData.child('senderType').val() === 'visitor' && root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid && newData.child('visitorId').val() === auth.uid) || (root.child('admins').child(auth.uid).val() === true && newData.child('senderType').val() === 'admin'))",
+          "senderType": {
+            ".validate": "!newData.exists() || (newData.isString() && (newData.val() === 'visitor' || newData.val() === 'admin'))"
+          },
+          "text": {
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0 && newData.val().length <= 420)"
+          },
+          "visitorId": {
+            ".validate": "!newData.exists() || (newData.isString() && ((newData.parent().child('senderType').val() === 'visitor' && newData.val() === auth.uid) || (newData.parent().child('senderType').val() === 'admin' && newData.val() === root.child('conversations').child($conversationId).child('visitorId').val())))"
+          },
+          "conversationId": {
+            ".validate": "!newData.exists() || (newData.isString() && newData.val() === $conversationId)"
+          },
+          "createdAt": {
+            ".validate": "!newData.exists() || newData.isNumber()"
+          },
+          "createdAtIso": {
+            ".validate": "!newData.exists() || newData.isString()"
+          },
+          "seenByAdmin": {
+            ".validate": "!newData.exists() || newData.isBoolean()"
+          },
+          "seenByVisitor": {
+            ".validate": "!newData.exists() || newData.isBoolean()"
+          },
+          "seenAtAdmin": {
+            ".validate": "!newData.exists() || newData.isString()"
+          },
+          "seenAtVisitor": {
+            ".validate": "!newData.exists() || newData.isString()"
+          },
+          "$other": {
+            ".validate": false
+          }
         }
       }
     },
 
     "typing": {
       "$conversationId": {
-        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
         "visitor": {
           ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid)",
           ".write": "auth != null && root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid",
-          ".validate": "!newData.exists() || newData.hasChildren(['isTyping'])"
+          ".validate": "!newData.exists() || (newData.hasChildren(['isTyping']) && newData.child('isTyping').isBoolean())"
         },
         "admin": {
           ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid)",
           ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
-          ".validate": "!newData.exists() || newData.hasChildren(['isTyping'])"
+          ".validate": "!newData.exists() || (newData.hasChildren(['isTyping']) && newData.child('isTyping').isBoolean())"
         }
       }
     },
 
     "presence": {
       "$conversationId": {
-        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
         "visitor": {
           ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid)",
           ".write": "auth != null && root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid",
-          ".validate": "!newData.exists() || newData.hasChildren(['isOnline'])"
+          ".validate": "!newData.exists() || (newData.hasChildren(['isOnline']) && newData.child('isOnline').isBoolean())"
         },
         "admin": {
           ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid)",
           ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
-          ".validate": "!newData.exists() || newData.hasChildren(['isOnline'])"
+          ".validate": "!newData.exists() || (newData.hasChildren(['isOnline']) && newData.child('isOnline').isBoolean())"
         }
       }
     },
@@ -97,10 +156,27 @@
     },
 
     "mensajes_contacto": {
-      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
-      "$msg": {
-        ".write": "auth != null",
-        ".validate": "newData.hasChildren(['nombre','contacto','mensaje'])"
+      "$mensaje_id": {
+        ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+        ".write": "auth != null && newData.child('conversationId').isString() && root.child('conversations').child(newData.child('conversationId').val()).child('visitorId').val() === auth.uid",
+        "nombre": {
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0 && newData.val().length <= 70)"
+        },
+        "contacto": {
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0 && newData.val().length <= 100)"
+        },
+        "mensaje": {
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length > 0 && newData.val().length <= 420)"
+        },
+        "fecha": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "conversationId": {
+          ".validate": "!newData.exists() || newData.isString()"
+        },
+        "$other": {
+          ".validate": false
+        }
       }
     }
   }
