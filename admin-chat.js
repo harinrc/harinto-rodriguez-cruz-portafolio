@@ -66,9 +66,17 @@
     }
 
     function setView(view) {
-        loginSection.hidden = view !== 'login';
-        unauthorizedSection.hidden = view !== 'unauthorized';
-        appSection.hidden = view !== 'app';
+        const showLogin = view === 'login';
+        const showUnauthorized = view === 'unauthorized';
+        const showApp = view === 'app';
+
+        loginSection.hidden = !showLogin;
+        unauthorizedSection.hidden = !showUnauthorized;
+        appSection.hidden = !showApp;
+
+        loginSection.style.display = showLogin ? 'block' : 'none';
+        unauthorizedSection.style.display = showUnauthorized ? 'block' : 'none';
+        appSection.style.display = showApp ? 'grid' : 'none';
     }
 
     function setAuthState(text) {
@@ -438,6 +446,7 @@
         replyInput.disabled = true;
         replyInput.value = '';
         replyInput.placeholder = 'Escribe una respuesta...';
+        listEl.innerHTML = '<p class="thread-empty">Inicia sesion como admin para ver conversaciones.</p>';
         threadHeaderEl.textContent = 'Selecciona una conversacion';
         threadMessagesEl.innerHTML = '<p class="thread-empty">No hay conversacion seleccionada.</p>';
         setThreadStatus('open');
@@ -601,6 +610,7 @@
         }
 
         if (!isAdmin) {
+            listEl.innerHTML = '<p class="thread-empty">Tu cuenta no tiene permisos de admin.</p>';
             setView('unauthorized');
             return;
         }
