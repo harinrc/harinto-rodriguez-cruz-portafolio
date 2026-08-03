@@ -829,7 +829,7 @@ function initChatWidget() {
         const nowIso = new Date().toISOString();
         const clean = (v, max) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, max);
         const name = clean(visitorName, 100);
-        const contact = clean(visitorContact, 120);
+        const contact = clean(visitorContact, 100);
         const msg = clean(text, 420);
 
         let resolvedId = String(conversationId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 120);
@@ -855,9 +855,8 @@ function initChatWidget() {
                 updatedAt: firebase.database.ServerValue.TIMESTAMP,
                 createdAtIso: nowIso,
                 updatedAtIso: nowIso,
-                lastMessage: '',
-                unreadForAdmin: 0,
-                unreadForVisitor: 0
+                // Rules require a non-empty lastMessage when conversation is created.
+                lastMessage: msg
             });
         }
 
@@ -867,9 +866,7 @@ function initChatWidget() {
             visitorId: uid,
             conversationId: resolvedId,
             createdAt: firebase.database.ServerValue.TIMESTAMP,
-            createdAtIso: nowIso,
-            seenByAdmin: false,
-            seenByVisitor: true
+            createdAtIso: nowIso
         });
 
         await db.ref(`conversations/${resolvedId}`).update({
@@ -878,8 +875,7 @@ function initChatWidget() {
             status: 'open',
             updatedAt: firebase.database.ServerValue.TIMESTAMP,
             updatedAtIso: nowIso,
-            lastMessage: msg,
-            unreadForAdmin: firebase.database.ServerValue.increment(1)
+            lastMessage: msg
         });
 
         // non-critical legacy write
