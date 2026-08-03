@@ -677,6 +677,23 @@ function initChatWidget() {
     const badge = chatBtn ? chatBtn.querySelector('.chat-badge') : null;
 
     if (!chatBtn || !chatWindow || !chatBody) return;
+    if (typeof firebase === 'undefined' || !firebase.apps || !firebase.apps.length) {
+        console.error('Firebase no esta inicializado para el widget de chat.');
+        return;
+    }
+
+    const VISITOR_APP_NAME = 'harinrc-visitor-chat-app';
+    let visitorApp;
+    try {
+        visitorApp = firebase.apps.find((app) => app.name === VISITOR_APP_NAME)
+            || firebase.initializeApp(firebase.app().options, VISITOR_APP_NAME);
+    } catch (error) {
+        console.warn('No se pudo inicializar app secundaria de Firebase, se usara app por defecto:', error);
+        visitorApp = firebase.app();
+    }
+
+    const db = visitorApp.database();
+    const auth = visitorApp.auth();
 
     const CHAT_STORAGE_KEY = 'harinrc_chat_conversation_v1';
     const CHAT_VISITOR_KEY = 'harinrc_chat_visitor_v1';
@@ -704,17 +721,15 @@ function initChatWidget() {
     const VISITOR_VAPID_PUBLIC_KEY = 'REEMPLAZA_CON_TU_VAPID_KEY_PUBLICA';
 
     const getAuthUid = () => {
-        if (typeof firebase === 'undefined' || typeof firebase.auth !== 'function') return '';
-        const currentUser = firebase.auth().currentUser;
+        const currentUser = auth.currentUser;
         return currentUser && currentUser.uid ? currentUser.uid : '';
     };
 
     const authReadyPromise = (() => {
-        if (typeof firebase === 'undefined' || typeof firebase.auth !== 'function') {
+        if (!auth) {
             return Promise.resolve(null);
         }
 
-        const auth = firebase.auth();
         const tryAnonSignIn = () => auth.signInAnonymously();
 
         return auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
@@ -775,7 +790,7 @@ function initChatWidget() {
     const saveVisitorPushToken = async (visitorId, token) => {
         if (!visitorId || !token) return;
         const tokenKey = normalizeTokenKey(token);
-        await firebase.database().ref(`visitor_push_tokens/${visitorId}/${tokenKey}`).set({
+        await db.ref(`visitor_push_tokens/${visitorId}/${tokenKey}`).set({
             token,
             updatedAt: firebase.database.ServerValue.TIMESTAMP,
             userAgent: navigator.userAgent || ''
@@ -1069,16 +1084,16 @@ function initChatWidget() {
                 seenByVisitor: true
             };
 
-            firebase.database().ref(`conversations/${conversationId}`).set(conversationPayload)
-                .then(() => firebase.database().ref(`messages/${conversationId}`).push(messagePayload))
-                .then(() => firebase.database().ref(`conversations/${conversationId}`).update({
+            db.ref(`conversations/${conversationId}`).set(conversationPayload)
+                .then(() => db.ref(`messages/${conversationId}`).push(messagePayload))
+                .then(() => db.ref(`conversations/${conversationId}`).update({
                     lastMessage: message,
                     status: 'open',
                     updatedAt: firebase.database.ServerValue.TIMESTAMP,
                     updatedAtIso: nowIso,
                     unreadForAdmin: firebase.database.ServerValue.increment(1)
                 }))
-                .then(() => firebase.database().ref('mensajes_contacto').push({
+                .then(() => db.ref('mensajes_contacto').push({
                     nombre: name,
                     contacto: contact,
                     mensaje: message,
@@ -1131,7 +1146,7 @@ function initChatWidget() {
             messagesRef.off();
         }
 
-        messagesRef = firebase.database().ref(`messages/${conversationId}`).limitToLast(80);
+        messagesRef = db.ref(`messages/${conversationId}`).limitToLast(80);
         messagesRef.on('value', (snapshot) => {
             conversationRecoveryAttempted = false;
             const rawMessages = snapshot.val() || {};
@@ -1149,7 +1164,7 @@ function initChatWidget() {
                     updates[`messages/${conversationId}/${entry.id}/seenAtVisitor`] = nowIso;
                 });
                 updates[`conversations/${conversationId}/unreadForVisitor`] = 0;
-                firebase.database().ref().update(updates).catch(() => {});
+                db.ref().update(updates).catch(() => {});
 
                 const latest = adminUnread[adminUnread.length - 1];
                 maybeNotifyAdminReply(latest.text || 'Nueva respuesta');
@@ -1214,8 +1229,8 @@ function initChatWidget() {
 
         const visitorId = ensureVisitorId();
         ensureVisitorMessaging(visitorId);
-        const connectedRef = firebase.database().ref('.info/connected');
-        visitorPresenceRef = firebase.database().ref(`presence/${conversationId}/visitor`);
+        const connectedRef = db.ref('.info/connected');
+        visitorPresenceRef = db.ref(`presence/${conversationId}/visitor`);
         connectedRef.on('value', (snap) => {
             if (snap.val() !== true) return;
             visitorPresenceRef.onDisconnect().set({
@@ -1231,10 +1246,10 @@ function initChatWidget() {
             }).catch(() => {});
         });
 
-        visitorTypingRef = firebase.database().ref(`typing/${conversationId}/visitor`);
-        adminTypingRef = firebase.database().ref(`typing/${conversationId}/admin`);
-        adminPresenceRef = firebase.database().ref(`presence/${conversationId}/admin`);
-        conversationMetaRef = firebase.database().ref(`conversations/${conversationId}`);
+        visitorTypingRef = db.ref(`typing/${conversationId}/visitor`);
+        adminTypingRef = db.ref(`typing/${conversationId}/admin`);
+        adminPresenceRef = db.ref(`presence/${conversationId}/admin`);
+        conversationMetaRef = db.ref(`conversations/${conversationId}`);
 
         adminTypingRef.on('value', (snap) => {
             const val = snap.val() || {};
@@ -1309,8 +1324,8 @@ function initChatWidget() {
                 seenByVisitor: true
             };
 
-            firebase.database().ref(`messages/${conversationId}`).push(payload)
-                .then(() => firebase.database().ref(`conversations/${conversationId}`).update({
+            db.ref(`messages/${conversationId}`).push(payload)
+                .then(() => db.ref(`conversations/${conversationId}`).update({
                     updatedAt: firebase.database.ServerValue.TIMESTAMP,
                     updatedAtIso: nowIso,
                     lastMessage: text,
