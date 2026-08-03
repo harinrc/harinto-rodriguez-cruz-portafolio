@@ -29,6 +29,10 @@ function initPcbBackground() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const staticLayer = document.createElement('canvas');
+    const staticCtx = staticLayer.getContext('2d');
+    if (!staticCtx) return;
+
     let tracks = [];
     let pulses = [];
     let animationFrameId;
@@ -37,15 +41,80 @@ function initPcbBackground() {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let lastFrameTime = 0;
     let resizeTimer;
+    let themeColors = null;
 
     const getThemeColor = (name) => {
         return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     };
 
+    const updateThemeColors = () => {
+        themeColors = {
+            base: getThemeColor('--pcb-base'),
+            trackShadow: getThemeColor('--pcb-track-shadow'),
+            track: getThemeColor('--pcb-track'),
+            node: getThemeColor('--pcb-node'),
+            hole: getThemeColor('--pcb-hole'),
+            pulseGlow: getThemeColor('--pcb-pulse-glow'),
+            pulseCore: getThemeColor('--pcb-pulse-core'),
+            pulseHot: getThemeColor('--pcb-pulse-hot')
+        };
+    };
+
+    const renderStaticLayer = () => {
+        if (!themeColors) updateThemeColors();
+
+        staticCtx.clearRect(0, 0, staticLayer.width, staticLayer.height);
+        staticCtx.fillStyle = themeColors.base;
+        staticCtx.fillRect(0, 0, staticLayer.width, staticLayer.height);
+
+        tracks.forEach((track) => {
+            staticCtx.beginPath();
+            staticCtx.moveTo(track[0].x + 2, track[0].y + 2);
+            for (let pointIndex = 1; pointIndex < track.length; pointIndex++) {
+                staticCtx.lineTo(track[pointIndex].x + 2, track[pointIndex].y + 2);
+            }
+            staticCtx.strokeStyle = themeColors.trackShadow;
+            staticCtx.lineWidth = 3.5;
+            staticCtx.stroke();
+
+            staticCtx.beginPath();
+            staticCtx.moveTo(track[0].x, track[0].y);
+            for (let pointIndex = 1; pointIndex < track.length; pointIndex++) {
+                staticCtx.lineTo(track[pointIndex].x, track[pointIndex].y);
+            }
+            staticCtx.strokeStyle = themeColors.track;
+            staticCtx.lineWidth = 3;
+            staticCtx.stroke();
+
+            const start = track[0];
+            const end = track[track.length - 1];
+
+            [start, end].forEach((position) => {
+                staticCtx.beginPath();
+                staticCtx.arc(position.x + 1, position.y + 1, 4.5, 0, Math.PI * 2);
+                staticCtx.fillStyle = themeColors.trackShadow;
+                staticCtx.fill();
+
+                staticCtx.beginPath();
+                staticCtx.arc(position.x, position.y, 4, 0, Math.PI * 2);
+                staticCtx.fillStyle = themeColors.node;
+                staticCtx.fill();
+
+                staticCtx.beginPath();
+                staticCtx.arc(position.x, position.y, 1.5, 0, Math.PI * 2);
+                staticCtx.fillStyle = themeColors.hole;
+                staticCtx.fill();
+            });
+        });
+    };
+
     const resizeCanvas = () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+        staticLayer.width = canvas.width;
+        staticLayer.height = canvas.height;
         generateHardware();
+        renderStaticLayer();
         renderFrame();
     };
 
@@ -86,46 +155,6 @@ function initPcbBackground() {
         }
     }
 
-    const drawTrack = (track, colors) => {
-        ctx.beginPath();
-        ctx.moveTo(track[0].x + 2, track[0].y + 2);
-        for (let pointIndex = 1; pointIndex < track.length; pointIndex++) {
-            ctx.lineTo(track[pointIndex].x + 2, track[pointIndex].y + 2);
-        }
-        ctx.strokeStyle = colors.trackShadow;
-        ctx.lineWidth = 3.5;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(track[0].x, track[0].y);
-        for (let pointIndex = 1; pointIndex < track.length; pointIndex++) {
-            ctx.lineTo(track[pointIndex].x, track[pointIndex].y);
-        }
-        ctx.strokeStyle = colors.track;
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        const start = track[0];
-        const end = track[track.length - 1];
-
-        [start, end].forEach((position) => {
-            ctx.beginPath();
-            ctx.arc(position.x + 1, position.y + 1, 4.5, 0, Math.PI * 2);
-            ctx.fillStyle = colors.trackShadow;
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(position.x, position.y, 4, 0, Math.PI * 2);
-            ctx.fillStyle = colors.node;
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(position.x, position.y, 1.5, 0, Math.PI * 2);
-            ctx.fillStyle = colors.hole;
-            ctx.fill();
-        });
-    };
-
     const drawPulse = (pulse, colors) => {
         const track = tracks[pulse.trackIndex];
         if (!track || pulse.segment >= track.length - 1) return;
@@ -165,21 +194,12 @@ function initPcbBackground() {
     };
 
     function renderFrame() {
-        const colors = {
-            base: getThemeColor('--pcb-base'),
-            trackShadow: getThemeColor('--pcb-track-shadow'),
-            track: getThemeColor('--pcb-track'),
-            node: getThemeColor('--pcb-node'),
-            hole: getThemeColor('--pcb-hole'),
-            pulseGlow: getThemeColor('--pcb-pulse-glow'),
-            pulseCore: getThemeColor('--pcb-pulse-core'),
-            pulseHot: getThemeColor('--pcb-pulse-hot')
-        };
+        const colors = themeColors;
+        if (!colors) return;
 
         ctx.fillStyle = colors.base;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        tracks.forEach((track) => drawTrack(track, colors));
+        ctx.drawImage(staticLayer, 0, 0);
 
         if (!prefersReducedMotion.matches) {
             pulses.forEach((pulse) => drawPulse(pulse, colors));
@@ -231,6 +251,8 @@ function initPcbBackground() {
     const themeObserver = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
             if (mutation.attributeName === 'data-theme') {
+                updateThemeColors();
+                renderStaticLayer();
                 renderFrame();
                 break;
             }
@@ -239,6 +261,7 @@ function initPcbBackground() {
 
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
+    updateThemeColors();
     resizeCanvas();
     restartAnimation();
 }
@@ -430,13 +453,15 @@ function enforceDarkTheme() {
 function startProfileCarousel() {
     const images = document.querySelectorAll('.profile-img');
     let currentIndex = 0;
+    let profileTimer = null;
 
     // Si no hay imágenes o solo hay una, no ejecuta el carrusel
     if (images.length <= 1) return;
 
     const profileInterval = performanceProfile.shouldReduceEffects ? 7000 : 4000;
 
-    setInterval(() => {
+    const advance = () => {
+        if (document.hidden) return;
         // 1. Quita la clase 'active' de la imagen actual (empieza a desvanecerse)
         images[currentIndex].classList.remove('active');
 
@@ -445,7 +470,29 @@ function startProfileCarousel() {
 
         // 3. Añade la clase 'active' a la nueva imagen (aparece suavemente)
         images[currentIndex].classList.add('active');
-    }, profileInterval); // Cambia la foto automáticamente
+    };
+
+    const stopCarousel = () => {
+        if (profileTimer) {
+            window.clearInterval(profileTimer);
+            profileTimer = null;
+        }
+    };
+
+    const startCarousel = () => {
+        stopCarousel();
+        profileTimer = window.setInterval(advance, profileInterval);
+    };
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            stopCarousel();
+            return;
+        }
+        startCarousel();
+    });
+
+    startCarousel();
 }
 
 // 4. Portadas dinámicas en Hero con desvanecido cada 10s
@@ -462,14 +509,38 @@ function initHeroBackgroundSlider() {
     }
 
     let currentIndex = 0;
+    let heroTimer = null;
 
     const heroInterval = performanceProfile.shouldReduceEffects ? 14000 : 10000;
 
-    window.setInterval(() => {
+    const nextSlide = () => {
+        if (document.hidden) return;
         slides[currentIndex].classList.remove('active');
         currentIndex = (currentIndex + 1) % slides.length;
         slides[currentIndex].classList.add('active');
-    }, heroInterval);
+    };
+
+    const stopSlider = () => {
+        if (heroTimer) {
+            window.clearInterval(heroTimer);
+            heroTimer = null;
+        }
+    };
+
+    const startSlider = () => {
+        stopSlider();
+        heroTimer = window.setInterval(nextSlide, heroInterval);
+    };
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            stopSlider();
+            return;
+        }
+        startSlider();
+    });
+
+    startSlider();
 }
 
 // 5. Mini carruseles por proyecto (desvanecimiento cada 3 segundos)
@@ -527,7 +598,7 @@ function startProjectImageCarousels() {
         const startAutoplay = () => {
             stopAutoplay();
             autoplayTimer = setInterval(() => {
-                if (isPaused) return;
+                if (isPaused || document.hidden) return;
                 const nextIndex = (currentIndex + 1) % slides.length;
                 goToSlide(nextIndex);
             }, slideInterval);
@@ -684,6 +755,8 @@ function initChatWidget() {
     const MAX_MESSAGE_LENGTH = 420;
 
     let scrollTimeout;
+    let scrollRaf = 0;
+    let chatHiddenByScroll = false;
     let activeConversationId = window.localStorage.getItem(CHAT_STORAGE_KEY) || '';
     let activeVisitorId = window.localStorage.getItem(CHAT_VISITOR_KEY) || '';
     let activeProfile = { name: '', contact: '' };
@@ -1273,11 +1346,21 @@ function initChatWidget() {
     };
 
     window.addEventListener('scroll', () => {
-        chatBtn.classList.add('scroll-hide');
-        window.clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            chatBtn.classList.remove('scroll-hide');
-        }, 350);
+        if (scrollRaf) return;
+        scrollRaf = window.requestAnimationFrame(() => {
+            scrollRaf = 0;
+            if (!chatHiddenByScroll) {
+                chatBtn.classList.add('scroll-hide');
+                chatHiddenByScroll = true;
+            }
+
+            window.clearTimeout(scrollTimeout);
+            scrollTimeout = window.setTimeout(() => {
+                if (!chatHiddenByScroll) return;
+                chatBtn.classList.remove('scroll-hide');
+                chatHiddenByScroll = false;
+            }, 350);
+        });
     }, { passive: true });
 
     chatBtn.addEventListener('click', () => {
@@ -1336,6 +1419,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let resumeTimer;
     let isPaused = false;
     let isUserInteracting = false;
+    let scrollRaf = 0;
 
     const scrollToCard = (index) => {
         const targetCard = galleryCards[index];
@@ -1368,7 +1452,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const startAutoScroll = () => {
         stopAutoScroll();
         autoScrollTimer = setInterval(() => {
-            if (isPaused || isUserInteracting) return;
+            if (isPaused || isUserInteracting || document.hidden) return;
 
             currentIndex = (currentIndex + 1) % galleryCards.length;
             scrollToCard(currentIndex);
@@ -1407,10 +1491,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     galleryCarousel.addEventListener('scroll', () => {
-        if (isUserInteracting) return;
-        pauseAutoScroll();
-        resumeAutoScroll();
-    });
+        if (isUserInteracting || scrollRaf) return;
+        scrollRaf = window.requestAnimationFrame(() => {
+            scrollRaf = 0;
+            pauseAutoScroll();
+            resumeAutoScroll();
+        });
+    }, { passive: true });
 
     galleryCarousel.addEventListener('mouseenter', () => {
         pauseAutoScroll();

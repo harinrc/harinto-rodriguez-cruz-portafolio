@@ -61,6 +61,7 @@ body::after {
     height: 100vh;
     z-index: 0;
     pointer-events: none;
+    transform: translateZ(0);
 }
 
 .pcb-vignette {
@@ -341,6 +342,7 @@ body::after {
     box-shadow: var(--card-shadow);
     transform: translateZ(0);
     transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
+    contain: paint;
 }
 
 .gallery-card:hover {
@@ -991,7 +993,7 @@ body::after {
     justify-content: center;
     font-size: 20px;
     border: 1px solid rgba(220, 38, 38, 0.1);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 /* Efecto hover Crimson Tech independiente para cada icono */
@@ -1133,7 +1135,8 @@ body::after {
     justify-content: center;
     z-index: 1000;
     box-shadow: 0 8px 25px rgba(220, 38, 38, 0.4);
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.3s ease, opacity 0.3s ease;
+    will-change: transform, opacity;
 }
 
 /* Efecto de ocultación inteligente al hacer scroll */
@@ -1197,6 +1200,7 @@ body.chat-open::before {
     opacity: 1;
     transform: translateY(0) scale(1);
     transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    contain: layout paint;
 }
 
 .chat-window.hidden {
@@ -1810,6 +1814,7 @@ body::after {
     animation: cardNeonPulse 6s ease-in-out infinite;
     overflow: hidden;
     isolation: isolate;
+    will-change: transform, box-shadow;
 }
 
 .skill-card::after,
@@ -1838,6 +1843,7 @@ body::after {
     position: relative;
     overflow: hidden;
     animation: btnEnergyIdle 3.4s ease-in-out infinite;
+    will-change: transform, box-shadow;
 }
 
 .btn::before {
@@ -2035,6 +2041,7 @@ html[data-performance="low"] .btn,
 html[data-performance="low"] .project-dot,
 html[data-performance="low"] .social-icons-horizontal a {
     animation: none !important;
+    will-change: auto !important;
 }
 
 html[data-performance="low"] .skill-card,
