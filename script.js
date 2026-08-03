@@ -1015,16 +1015,15 @@ function initChatWidget() {
                 conversationId,
                 visitorId: verifiedVisitorId,
                 visitorName: name,
-                visitorContact: contact,
+                visitorContact: contact.slice(0, 100),
                 status: 'open',
                 source: 'web_portfolio_widget',
                 createdAtIso: nowIso,
                 updatedAtIso: nowIso,
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                lastMessage: '',
-                unreadForAdmin: 0,
-                unreadForVisitor: 0
+                // Rules require a non-empty lastMessage at creation time.
+                lastMessage: message
             };
 
             const messagePayload = {
@@ -1033,9 +1032,7 @@ function initChatWidget() {
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
                 createdAtIso: nowIso,
                 visitorId: verifiedVisitorId,
-                conversationId,
-                seenByAdmin: false,
-                seenByVisitor: true
+                conversationId
             };
 
             firebase.database().ref(`conversations/${conversationId}`).set(conversationPayload)
@@ -1044,8 +1041,7 @@ function initChatWidget() {
                     lastMessage: message,
                     status: 'open',
                     updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                    updatedAtIso: nowIso,
-                    unreadForAdmin: firebase.database.ServerValue.increment(1)
+                    updatedAtIso: nowIso
                 }))
                 .then(() => firebase.database().ref('mensajes_contacto').push({
                     nombre: name,
@@ -1254,9 +1250,7 @@ function initChatWidget() {
                 visitorId: verifiedVisitorId,
                 conversationId,
                 createdAt: firebase.database.ServerValue.TIMESTAMP,
-                createdAtIso: nowIso,
-                seenByAdmin: false,
-                seenByVisitor: true
+                createdAtIso: nowIso
             };
 
             firebase.database().ref(`messages/${conversationId}`).push(payload)
@@ -1264,8 +1258,7 @@ function initChatWidget() {
                     updatedAt: firebase.database.ServerValue.TIMESTAMP,
                     updatedAtIso: nowIso,
                     lastMessage: text,
-                    status: 'open',
-                    unreadForAdmin: firebase.database.ServerValue.increment(1)
+                    status: 'open'
                 }))
                 .then(() => {
                 liveMessage.value = '';
