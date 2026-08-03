@@ -22,6 +22,23 @@ function applyPerformanceMode() {
     document.documentElement.setAttribute('data-performance', mode);
 }
 
+function initScrollPerformanceMode() {
+    const scrollingClass = 'is-scrolling';
+    let scrollIdleTimer;
+
+    const enableScrollMode = () => {
+        document.body.classList.add(scrollingClass);
+        window.clearTimeout(scrollIdleTimer);
+        scrollIdleTimer = window.setTimeout(() => {
+            document.body.classList.remove(scrollingClass);
+        }, 140);
+    };
+
+    window.addEventListener('scroll', enableScrollMode, { passive: true });
+    window.addEventListener('wheel', enableScrollMode, { passive: true });
+    window.addEventListener('touchmove', enableScrollMode, { passive: true });
+}
+
 function initPcbBackground() {
     const canvas = document.getElementById('pcb-background');
     if (!canvas) return;
@@ -187,6 +204,11 @@ function initPcbBackground() {
     }
 
     const animate = (timestamp = 0) => {
+        if (document.body.classList.contains('is-scrolling')) {
+            animationFrameId = window.requestAnimationFrame(animate);
+            return;
+        }
+
         const minFrameTime = performanceProfile.shouldReduceEffects ? 33 : 16;
         if ((timestamp - lastFrameTime) >= minFrameTime) {
             renderFrame();
@@ -411,6 +433,7 @@ function initLoopingFooterTypewriter() {
 
 // Iniciar el efecto cuando cargue la página
 document.addEventListener("DOMContentLoaded", () => {
+    initScrollPerformanceMode();
     applyPerformanceMode();
     initPcbBackground();
     typingEffect();

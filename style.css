@@ -82,6 +82,14 @@ body::after {
     position: relative;
 }
 
+.gallery-section,
+.skills-section,
+.projects-section,
+.main-footer {
+    content-visibility: auto;
+    contain-intrinsic-size: 760px;
+}
+
 /* ==========================================================================
    BARRA DE NAVEGACIÓN (NAVBAR)
    ========================================================================== */
@@ -338,6 +346,7 @@ body::after {
     border: 1px solid var(--border-color);
     border-radius: 20px;
     overflow: hidden;
+    contain: layout paint;
     box-shadow: var(--card-shadow);
     transform: translateZ(0);
     transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease;
@@ -490,6 +499,7 @@ body::after {
     border-radius: 24px;
     box-shadow: var(--card-shadow);
     border: 1px solid var(--border-color);
+    contain: layout paint;
     transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
 }
 
@@ -1812,6 +1822,14 @@ body::after {
     isolation: isolate;
 }
 
+body.is-scrolling .skill-card,
+body.is-scrolling .project-card,
+body.is-scrolling .gallery-card,
+body.is-scrolling .btn,
+body.is-scrolling .section-title::before {
+    animation-play-state: paused;
+}
+
 .skill-card::after,
 .project-card::after,
 .gallery-card::after {
@@ -1972,6 +1990,13 @@ body::after {
     transform: translateY(-2px) scale(0.995);
 }
 
+body.is-scrolling .skill-card,
+body.is-scrolling .project-card,
+body.is-scrolling .gallery-card,
+body.is-scrolling .gallery-link:hover .gallery-card {
+    filter: none;
+}
+
 .js-typewriter {
     display: inline-block;
     min-height: 1em;
@@ -2022,6 +2047,18 @@ body::after {
    ========================================================================== */
 html[data-performance="low"] * {
     scroll-behavior: auto !important;
+}
+
+html[data-performance="low"] .skill-card,
+html[data-performance="low"] .project-card,
+html[data-performance="low"] .gallery-card {
+    animation-duration: 9s;
+}
+
+html[data-performance="low"] body.is-scrolling .skill-card,
+html[data-performance="low"] body.is-scrolling .project-card,
+html[data-performance="low"] body.is-scrolling .gallery-card {
+    box-shadow: var(--card-shadow);
 }
 
 html[data-performance="low"] body::after {
