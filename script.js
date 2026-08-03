@@ -902,10 +902,10 @@ function initChatWidget() {
         if (code.includes('unauthenticated')) {
             return 'No se pudo validar tu sesión. Recarga la página para continuar.';
         }
-        if (code.includes('permission-denied') || message.includes('permission_denied')) {
+        if (code.includes('permission_denied') || code.includes('permission-denied') || message.includes('permission_denied') || message.includes('permission denied')) {
             return 'La sesión de chat expiró. Por favor, recarga la página e inicia una nueva conversación.';
         }
-        if (message.includes('firebase') || message.includes('network') || message.includes('unavailable')) {
+        if (message.includes('network') || message.includes('unavailable')) {
             return 'Error de conexión. Verifica tu internet e intenta de nuevo.';
         }
         return 'No se pudo enviar el mensaje. Intenta de nuevo en unos segundos.';
@@ -1197,9 +1197,10 @@ function initChatWidget() {
                 mountConversationView(resolvedConversationId);
             }).catch((error) => {
                 console.error('Error al iniciar chat:', error);
-                const errorCode = String((error && error.code) || '').toLowerCase();
-                if (errorCode.includes('permission-denied')) {
-                    // Stale conversationId from a previous auth session — reset so next attempt creates a new one
+                const eCode = String((error && error.code) || '').toLowerCase();
+                const eMsg = String((error && error.message) || '').toLowerCase();
+                const isPermDenied = eCode.includes('permission_denied') || eCode.includes('permission-denied') || eMsg.includes('permission_denied') || eMsg.includes('permission denied');
+                if (isPermDenied) {
                     activeConversationId = '';
                     window.localStorage.removeItem(CHAT_STORAGE_KEY);
                 }
@@ -1411,6 +1412,17 @@ function initChatWidget() {
                 if (sendButton) sendButton.disabled = false;
             }).catch((error) => {
                 console.error('Error al enviar mensaje:', error);
+                const eCode = String((error && error.code) || '').toLowerCase();
+                const eMsg = String((error && error.message) || '').toLowerCase();
+                const isPermDenied = eCode.includes('permission_denied') || eCode.includes('permission-denied') || eMsg.includes('permission_denied') || eMsg.includes('permission denied');
+                if (isPermDenied) {
+                    // Rules blocked the write — reset so user can start a new conversation
+                    activeConversationId = '';
+                    window.localStorage.removeItem(CHAT_STORAGE_KEY);
+                    clearRealtimeRefs();
+                    renderEntryForm();
+                    return;
+                }
                 alert(resolveSubmitError(error));
                 if (sendButton) sendButton.disabled = false;
             });
