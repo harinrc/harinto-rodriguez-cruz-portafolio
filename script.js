@@ -700,6 +700,7 @@ function initChatWidget() {
     let authInitError = null;
     let unreadAdminCount = 0;
     let notificationPermissionRequested = false;
+    let conversationRecoveryAttempted = false;
     const VISITOR_VAPID_PUBLIC_KEY = 'REEMPLAZA_CON_TU_VAPID_KEY_PUBLICA';
 
     const getAuthUid = () => {
@@ -713,12 +714,21 @@ function initChatWidget() {
             return Promise.resolve(null);
         }
 
-        return firebase.auth().signInAnonymously()
+        const auth = firebase.auth();
+        const tryAnonSignIn = () => auth.signInAnonymously();
+
+        return auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+            .catch((persistenceError) => {
+                // En algunos navegadores privados LOCAL puede fallar; intentamos seguir con sign-in.
+                console.warn('No se pudo aplicar persistencia LOCAL en Firebase Auth:', persistenceError);
+                return null;
+            })
+            .then(() => tryAnonSignIn())
             .then((credential) => {
                 authInitError = null;
                 currentAuthUid = (credential && credential.user && credential.user.uid) ? credential.user.uid : getAuthUid();
 
-                firebase.auth().onAuthStateChanged((user) => {
+                auth.onAuthStateChanged((user) => {
                     currentAuthUid = user && user.uid ? user.uid : '';
                 });
 
@@ -1123,6 +1133,7 @@ function initChatWidget() {
 
         messagesRef = firebase.database().ref(`messages/${conversationId}`).limitToLast(80);
         messagesRef.on('value', (snapshot) => {
+            conversationRecoveryAttempted = false;
             const rawMessages = snapshot.val() || {};
             const list = Object.keys(rawMessages)
                 .map((key) => ({ id: key, ...rawMessages[key] }))
@@ -1150,6 +1161,18 @@ function initChatWidget() {
                 return;
             }
 
+            if (!conversationRecoveryAttempted) {
+                conversationRecoveryAttempted = true;
+                ensureAuthenticatedVisitorUid()
+                    .then(() => {
+                        subscribeConversationMessages(conversationId);
+                    })
+                    .catch((recoveryError) => {
+                        console.error('No fue posible recuperar sesión de chat:', recoveryError);
+                    });
+                return;
+            }
+
             if (messagesRef) {
                 messagesRef.off();
                 messagesRef = null;
@@ -1159,6 +1182,7 @@ function initChatWidget() {
 
             activeConversationId = '';
             window.localStorage.removeItem(CHAT_STORAGE_KEY);
+            window.localStorage.removeItem(CHAT_VISITOR_KEY);
             renderEntryForm();
         });
     };
