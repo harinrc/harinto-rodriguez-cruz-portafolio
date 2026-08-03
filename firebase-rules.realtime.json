@@ -27,10 +27,19 @@
           ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 120)"
         },
         "status": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid && newData.val() === 'open'))",
           ".validate": "!newData.exists() || (newData.isString() && (newData.val() === 'open' || newData.val() === 'closed'))"
         },
         "lastMessage": {
           ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 420)"
+        },
+        "unreadForAdmin": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid)",
+          ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999)"
+        },
+        "unreadForVisitor": {
+          ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+          ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0 && newData.val() <= 9999)"
         }
       }
     },

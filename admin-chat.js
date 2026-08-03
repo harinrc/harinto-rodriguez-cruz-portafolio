@@ -29,6 +29,7 @@
     const db = firebase.database();
     const auth = firebase.auth();
     const FCM_VAPID_PUBLIC_KEY = 'REEMPLAZA_CON_TU_VAPID_KEY_PUBLICA';
+    const ALLOW_ADMIN_ANON_LOGIN = false;
 
     let isAdmin = false;
     let activeUid = '';
@@ -429,6 +430,10 @@
     }
 
     async function loginAnon() {
+        if (!ALLOW_ADMIN_ANON_LOGIN) {
+            alert('Login anonimo deshabilitado en produccion. Usa Google.');
+            return;
+        }
         try {
             await auth.signInAnonymously();
         } catch (error) {
@@ -551,7 +556,13 @@
     }
 
     googleBtn.addEventListener('click', loginWithGoogle);
-    anonBtn.addEventListener('click', loginAnon);
+    if (anonBtn) {
+        anonBtn.hidden = !ALLOW_ADMIN_ANON_LOGIN;
+        anonBtn.disabled = !ALLOW_ADMIN_ANON_LOGIN;
+        if (ALLOW_ADMIN_ANON_LOGIN) {
+            anonBtn.addEventListener('click', loginAnon);
+        }
+    }
     logoutBtn.addEventListener('click', logout);
     replyForm.addEventListener('submit', sendReply);
     closeConversationBtn.addEventListener('click', closeConversation);

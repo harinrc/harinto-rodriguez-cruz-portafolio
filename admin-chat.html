@@ -31,9 +31,9 @@
             <p>Inicia sesion con Google para responder chats desde tu telefono o PC.</p>
             <div class="admin-login-actions">
                 <button id="admin-google-btn" class="admin-btn primary" type="button"><i class="fa-brands fa-google"></i> Ingresar con Google</button>
-                <button id="admin-anon-btn" class="admin-btn secondary" type="button">Ingresar anonimo (solo prueba)</button>
+                <button id="admin-anon-btn" class="admin-btn secondary" type="button" hidden>Ingresar anonimo (solo prueba)</button>
             </div>
-            <p class="admin-help">Debes tener tu UID en <strong>admins/{uid}: true</strong> dentro de Realtime Database.</p>
+            <p class="admin-help">Modo produccion: acceso solo con Google. Debes tener tu UID en <strong>admins/{uid}: true</strong> dentro de Realtime Database.</p>
         </section>
 
         <section id="admin-unauthorized" class="admin-panel" hidden>
@@ -77,6 +77,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app-check.js"></script>
 
     <script>
       const firebaseConfig = {
@@ -91,6 +92,11 @@
 
       if (!firebase.apps.length) {
           firebase.initializeApp(firebaseConfig);
+      }
+
+      const ADMIN_APP_CHECK_SITE_KEY = 'REEMPLAZA_CON_TU_RECAPTCHA_ENTERPRISE_O_V3_SITE_KEY';
+      if (firebase.appCheck && ADMIN_APP_CHECK_SITE_KEY && !ADMIN_APP_CHECK_SITE_KEY.startsWith('REEMPLAZA_')) {
+          firebase.appCheck().activate(ADMIN_APP_CHECK_SITE_KEY, true);
       }
     </script>
     <script src="admin-chat.js"></script>

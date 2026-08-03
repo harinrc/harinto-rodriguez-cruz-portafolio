@@ -561,6 +561,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app-check.js"></script>
 
 <script>
   const firebaseConfig = {
@@ -577,6 +578,11 @@
   if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
   }
+
+    const WEB_APP_CHECK_SITE_KEY = 'REEMPLAZA_CON_TU_RECAPTCHA_ENTERPRISE_O_V3_SITE_KEY';
+    if (firebase.appCheck && WEB_APP_CHECK_SITE_KEY && !WEB_APP_CHECK_SITE_KEY.startsWith('REEMPLAZA_')) {
+            firebase.appCheck().activate(WEB_APP_CHECK_SITE_KEY, true);
+    }
 </script>
 
 <script src="script.js"></script>
