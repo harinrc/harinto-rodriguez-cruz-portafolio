@@ -41,6 +41,7 @@
     let visitorPresenceRef = null;
     let adminPresenceRef = null;
     let connectedRef = null;
+    let adminRoleRef = null;
     let adminTypingTimer = null;
     let messaging = null;
     let swReg = null;
@@ -126,11 +127,40 @@
             adminPresenceRef.off();
             adminPresenceRef = null;
         }
+        if (adminRoleRef) {
+            adminRoleRef.off();
+            adminRoleRef = null;
+        }
+    }
+
+    function isTrueLike(value) {
+        return value === true || value === 1 || value === '1' || value === 'true';
     }
 
     async function checkAdmin(uid) {
         const snap = await db.ref(`admins/${uid}`).once('value');
-        return snap.exists() && snap.val() === true;
+        return snap.exists() && isTrueLike(snap.val());
+    }
+
+    function watchAdminRole(uid) {
+        if (adminRoleRef) {
+            adminRoleRef.off();
+            adminRoleRef = null;
+        }
+
+        adminRoleRef = db.ref(`admins/${uid}`);
+        adminRoleRef.on('value', (snap) => {
+            const allowed = snap.exists() && isTrueLike(snap.val());
+            if (!allowed || isAdmin) return;
+
+            isAdmin = true;
+            setView('app');
+            setAuthState(`UID: ${uid.slice(0, 10)}... · admin activo`);
+            watchConversations();
+            ensurePwaAndMessaging();
+        }, (error) => {
+            console.error('Error observando rol admin:', error);
+        });
     }
 
     function renderConversations(items) {
@@ -598,9 +628,13 @@
         }
 
         activeUid = user.uid;
+        const provider = user.isAnonymous
+            ? 'anonimo'
+            : ((user.providerData && user.providerData[0] && user.providerData[0].providerId) || 'desconocido');
         currentUidEl.textContent = user.uid;
         logoutBtn.hidden = false;
-        setAuthState(`UID: ${user.uid.slice(0, 10)}...`);
+        setAuthState(`UID: ${user.uid.slice(0, 10)}... · ${provider}`);
+        watchAdminRole(user.uid);
 
         try {
             isAdmin = await checkAdmin(user.uid);
@@ -611,6 +645,7 @@
 
         if (!isAdmin) {
             listEl.innerHTML = '<p class="thread-empty">Tu cuenta no tiene permisos de admin.</p>';
+            setAuthState(`UID: ${user.uid.slice(0, 10)}... · sin permisos admin`);
             setView('unauthorized');
             return;
         }
@@ -618,5 +653,9 @@
         setView('app');
         watchConversations();
         ensurePwaAndMessaging();
+    });
+
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch((error) => {
+        console.warn('No se pudo fijar persistencia LOCAL en admin auth:', error);
     });
 })();
