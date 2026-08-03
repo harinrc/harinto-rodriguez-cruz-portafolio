@@ -29,7 +29,6 @@
     const db = firebase.database();
     const auth = firebase.auth();
     const FCM_VAPID_PUBLIC_KEY = 'REEMPLAZA_CON_TU_VAPID_KEY_PUBLICA';
-    const ALLOW_ADMIN_ANON_LOGIN = false;
 
     let isAdmin = false;
     let activeUid = '';
@@ -210,12 +209,6 @@
             }
         }, (error) => {
             console.error('Error leyendo conversaciones:', error);
-            const code = error && error.code ? String(error.code) : '';
-            if (code.toLowerCase().includes('permission_denied')) {
-                listEl.innerHTML = '<p class="thread-empty">Permiso denegado para leer conversaciones. Publica rules actualizadas.</p>';
-            } else {
-                listEl.innerHTML = '<p class="thread-empty">No se pudieron cargar conversaciones.</p>';
-            }
         });
     }
 
@@ -430,10 +423,6 @@
     }
 
     async function loginAnon() {
-        if (!ALLOW_ADMIN_ANON_LOGIN) {
-            alert('Login anonimo deshabilitado en produccion. Usa Google.');
-            return;
-        }
         try {
             await auth.signInAnonymously();
         } catch (error) {
@@ -556,13 +545,7 @@
     }
 
     googleBtn.addEventListener('click', loginWithGoogle);
-    if (anonBtn) {
-        anonBtn.hidden = !ALLOW_ADMIN_ANON_LOGIN;
-        anonBtn.disabled = !ALLOW_ADMIN_ANON_LOGIN;
-        if (ALLOW_ADMIN_ANON_LOGIN) {
-            anonBtn.addEventListener('click', loginAnon);
-        }
-    }
+    anonBtn.addEventListener('click', loginAnon);
     logoutBtn.addEventListener('click', logout);
     replyForm.addEventListener('submit', sendReply);
     closeConversationBtn.addEventListener('click', closeConversation);

@@ -29,10 +29,6 @@ function initPcbBackground() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const staticLayer = document.createElement('canvas');
-    const staticCtx = staticLayer.getContext('2d');
-    if (!staticCtx) return;
-
     let tracks = [];
     let pulses = [];
     let animationFrameId;
@@ -41,80 +37,15 @@ function initPcbBackground() {
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let lastFrameTime = 0;
     let resizeTimer;
-    let themeColors = null;
 
     const getThemeColor = (name) => {
         return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     };
 
-    const updateThemeColors = () => {
-        themeColors = {
-            base: getThemeColor('--pcb-base'),
-            trackShadow: getThemeColor('--pcb-track-shadow'),
-            track: getThemeColor('--pcb-track'),
-            node: getThemeColor('--pcb-node'),
-            hole: getThemeColor('--pcb-hole'),
-            pulseGlow: getThemeColor('--pcb-pulse-glow'),
-            pulseCore: getThemeColor('--pcb-pulse-core'),
-            pulseHot: getThemeColor('--pcb-pulse-hot')
-        };
-    };
-
-    const renderStaticLayer = () => {
-        if (!themeColors) updateThemeColors();
-
-        staticCtx.clearRect(0, 0, staticLayer.width, staticLayer.height);
-        staticCtx.fillStyle = themeColors.base;
-        staticCtx.fillRect(0, 0, staticLayer.width, staticLayer.height);
-
-        tracks.forEach((track) => {
-            staticCtx.beginPath();
-            staticCtx.moveTo(track[0].x + 2, track[0].y + 2);
-            for (let pointIndex = 1; pointIndex < track.length; pointIndex++) {
-                staticCtx.lineTo(track[pointIndex].x + 2, track[pointIndex].y + 2);
-            }
-            staticCtx.strokeStyle = themeColors.trackShadow;
-            staticCtx.lineWidth = 3.5;
-            staticCtx.stroke();
-
-            staticCtx.beginPath();
-            staticCtx.moveTo(track[0].x, track[0].y);
-            for (let pointIndex = 1; pointIndex < track.length; pointIndex++) {
-                staticCtx.lineTo(track[pointIndex].x, track[pointIndex].y);
-            }
-            staticCtx.strokeStyle = themeColors.track;
-            staticCtx.lineWidth = 3;
-            staticCtx.stroke();
-
-            const start = track[0];
-            const end = track[track.length - 1];
-
-            [start, end].forEach((position) => {
-                staticCtx.beginPath();
-                staticCtx.arc(position.x + 1, position.y + 1, 4.5, 0, Math.PI * 2);
-                staticCtx.fillStyle = themeColors.trackShadow;
-                staticCtx.fill();
-
-                staticCtx.beginPath();
-                staticCtx.arc(position.x, position.y, 4, 0, Math.PI * 2);
-                staticCtx.fillStyle = themeColors.node;
-                staticCtx.fill();
-
-                staticCtx.beginPath();
-                staticCtx.arc(position.x, position.y, 1.5, 0, Math.PI * 2);
-                staticCtx.fillStyle = themeColors.hole;
-                staticCtx.fill();
-            });
-        });
-    };
-
     const resizeCanvas = () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        staticLayer.width = canvas.width;
-        staticLayer.height = canvas.height;
         generateHardware();
-        renderStaticLayer();
         renderFrame();
     };
 
@@ -155,6 +86,46 @@ function initPcbBackground() {
         }
     }
 
+    const drawTrack = (track, colors) => {
+        ctx.beginPath();
+        ctx.moveTo(track[0].x + 2, track[0].y + 2);
+        for (let pointIndex = 1; pointIndex < track.length; pointIndex++) {
+            ctx.lineTo(track[pointIndex].x + 2, track[pointIndex].y + 2);
+        }
+        ctx.strokeStyle = colors.trackShadow;
+        ctx.lineWidth = 3.5;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(track[0].x, track[0].y);
+        for (let pointIndex = 1; pointIndex < track.length; pointIndex++) {
+            ctx.lineTo(track[pointIndex].x, track[pointIndex].y);
+        }
+        ctx.strokeStyle = colors.track;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        const start = track[0];
+        const end = track[track.length - 1];
+
+        [start, end].forEach((position) => {
+            ctx.beginPath();
+            ctx.arc(position.x + 1, position.y + 1, 4.5, 0, Math.PI * 2);
+            ctx.fillStyle = colors.trackShadow;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(position.x, position.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = colors.node;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(position.x, position.y, 1.5, 0, Math.PI * 2);
+            ctx.fillStyle = colors.hole;
+            ctx.fill();
+        });
+    };
+
     const drawPulse = (pulse, colors) => {
         const track = tracks[pulse.trackIndex];
         if (!track || pulse.segment >= track.length - 1) return;
@@ -194,12 +165,21 @@ function initPcbBackground() {
     };
 
     function renderFrame() {
-        const colors = themeColors;
-        if (!colors) return;
+        const colors = {
+            base: getThemeColor('--pcb-base'),
+            trackShadow: getThemeColor('--pcb-track-shadow'),
+            track: getThemeColor('--pcb-track'),
+            node: getThemeColor('--pcb-node'),
+            hole: getThemeColor('--pcb-hole'),
+            pulseGlow: getThemeColor('--pcb-pulse-glow'),
+            pulseCore: getThemeColor('--pcb-pulse-core'),
+            pulseHot: getThemeColor('--pcb-pulse-hot')
+        };
 
         ctx.fillStyle = colors.base;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(staticLayer, 0, 0);
+
+        tracks.forEach((track) => drawTrack(track, colors));
 
         if (!prefersReducedMotion.matches) {
             pulses.forEach((pulse) => drawPulse(pulse, colors));
@@ -251,8 +231,6 @@ function initPcbBackground() {
     const themeObserver = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
             if (mutation.attributeName === 'data-theme') {
-                updateThemeColors();
-                renderStaticLayer();
                 renderFrame();
                 break;
             }
@@ -261,7 +239,6 @@ function initPcbBackground() {
 
     themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
-    updateThemeColors();
     resizeCanvas();
     restartAnimation();
 }
@@ -453,15 +430,13 @@ function enforceDarkTheme() {
 function startProfileCarousel() {
     const images = document.querySelectorAll('.profile-img');
     let currentIndex = 0;
-    let profileTimer = null;
 
     // Si no hay imágenes o solo hay una, no ejecuta el carrusel
     if (images.length <= 1) return;
 
     const profileInterval = performanceProfile.shouldReduceEffects ? 7000 : 4000;
 
-    const advance = () => {
-        if (document.hidden) return;
+    setInterval(() => {
         // 1. Quita la clase 'active' de la imagen actual (empieza a desvanecerse)
         images[currentIndex].classList.remove('active');
 
@@ -470,29 +445,7 @@ function startProfileCarousel() {
 
         // 3. Añade la clase 'active' a la nueva imagen (aparece suavemente)
         images[currentIndex].classList.add('active');
-    };
-
-    const stopCarousel = () => {
-        if (profileTimer) {
-            window.clearInterval(profileTimer);
-            profileTimer = null;
-        }
-    };
-
-    const startCarousel = () => {
-        stopCarousel();
-        profileTimer = window.setInterval(advance, profileInterval);
-    };
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            stopCarousel();
-            return;
-        }
-        startCarousel();
-    });
-
-    startCarousel();
+    }, profileInterval); // Cambia la foto automáticamente
 }
 
 // 4. Portadas dinámicas en Hero con desvanecido cada 10s
@@ -509,38 +462,14 @@ function initHeroBackgroundSlider() {
     }
 
     let currentIndex = 0;
-    let heroTimer = null;
 
     const heroInterval = performanceProfile.shouldReduceEffects ? 14000 : 10000;
 
-    const nextSlide = () => {
-        if (document.hidden) return;
+    window.setInterval(() => {
         slides[currentIndex].classList.remove('active');
         currentIndex = (currentIndex + 1) % slides.length;
         slides[currentIndex].classList.add('active');
-    };
-
-    const stopSlider = () => {
-        if (heroTimer) {
-            window.clearInterval(heroTimer);
-            heroTimer = null;
-        }
-    };
-
-    const startSlider = () => {
-        stopSlider();
-        heroTimer = window.setInterval(nextSlide, heroInterval);
-    };
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-            stopSlider();
-            return;
-        }
-        startSlider();
-    });
-
-    startSlider();
+    }, heroInterval);
 }
 
 // 5. Mini carruseles por proyecto (desvanecimiento cada 3 segundos)
@@ -598,7 +527,7 @@ function startProjectImageCarousels() {
         const startAutoplay = () => {
             stopAutoplay();
             autoplayTimer = setInterval(() => {
-                if (isPaused || document.hidden) return;
+                if (isPaused) return;
                 const nextIndex = (currentIndex + 1) % slides.length;
                 goToSlide(nextIndex);
             }, slideInterval);
@@ -755,8 +684,6 @@ function initChatWidget() {
     const MAX_MESSAGE_LENGTH = 420;
 
     let scrollTimeout;
-    let scrollRaf = 0;
-    let chatHiddenByScroll = false;
     let activeConversationId = window.localStorage.getItem(CHAT_STORAGE_KEY) || '';
     let activeVisitorId = window.localStorage.getItem(CHAT_VISITOR_KEY) || '';
     let activeProfile = { name: '', contact: '' };
@@ -766,7 +693,6 @@ function initChatWidget() {
     let adminPresenceRef = null;
     let visitorTypingRef = null;
     let visitorPresenceRef = null;
-    let connectedRef = null;
     let visitorMessagingRef = null;
     let visitorSwReg = null;
     let lastSendAt = 0;
@@ -814,98 +740,6 @@ function initChatWidget() {
     }
 
     const sanitizeText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
-
-    const submitVisitorMessageSecure = async ({ conversationId = '', visitorName = '', visitorContact = '', text = '' }) => {
-        if (typeof firebase === 'undefined' || typeof firebase.database !== 'function') {
-            throw new Error('Firebase no está disponible.');
-        }
-        const authUser = firebase.auth && firebase.auth().currentUser;
-        const uid = authUser && authUser.uid;
-        if (!uid) {
-            throw { code: 'unauthenticated', message: 'No autenticado' };
-        }
-
-        const db = firebase.database();
-        const nowIso = new Date().toISOString();
-        const clean = (v, max) => String(v || '').replace(/\s+/g, ' ').trim().slice(0, max);
-        const name = clean(visitorName, 100);
-        const contact = clean(visitorContact, 100);
-        const msg = clean(text, 420);
-
-        let resolvedId = String(conversationId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 120);
-
-        if (resolvedId) {
-            const snap = await db.ref(`conversations/${resolvedId}`).once('value');
-            if (!snap.exists() || (snap.val() || {}).visitorId !== uid) {
-                resolvedId = '';
-            }
-        }
-
-        if (!resolvedId) {
-            const newRef = db.ref('conversations').push();
-            resolvedId = newRef.key;
-            await newRef.set({
-                conversationId: resolvedId,
-                visitorId: uid,
-                visitorName: name,
-                visitorContact: contact,
-                status: 'open',
-                source: 'web_portfolio_widget',
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                updatedAt: firebase.database.ServerValue.TIMESTAMP,
-                createdAtIso: nowIso,
-                updatedAtIso: nowIso,
-                // Rules require a non-empty lastMessage when conversation is created.
-                lastMessage: msg
-            });
-        }
-
-        await db.ref(`messages/${resolvedId}`).push({
-            senderType: 'visitor',
-            text: msg,
-            visitorId: uid,
-            conversationId: resolvedId,
-            createdAt: firebase.database.ServerValue.TIMESTAMP,
-            createdAtIso: nowIso
-        });
-
-        await db.ref(`conversations/${resolvedId}`).update({
-            visitorName: name,
-            visitorContact: contact,
-            status: 'open',
-            updatedAt: firebase.database.ServerValue.TIMESTAMP,
-            updatedAtIso: nowIso,
-            lastMessage: msg
-        });
-
-        // non-critical legacy write
-        db.ref('mensajes_contacto').push({
-            nombre: name,
-            contacto: contact,
-            mensaje: msg,
-            conversationId: resolvedId,
-            fecha: new Date().toLocaleString('es-NI', { timeZone: 'America/Managua' })
-        }).catch(() => {});
-
-        return { ok: true, conversationId: resolvedId };
-    };
-
-    const resolveSubmitError = (error) => {
-        const code = String((error && error.code) || '').toLowerCase();
-        const message = String((error && error.message) || '').toLowerCase();
-        console.warn('[Chat] Error al enviar:', error && error.code, '|', error && error.message);
-
-        if (code.includes('unauthenticated')) {
-            return 'No se pudo validar tu sesión. Recarga la página para continuar.';
-        }
-        if (code.includes('permission_denied') || code.includes('permission-denied') || message.includes('permission_denied') || message.includes('permission denied')) {
-            return 'La sesión de chat expiró. Por favor, recarga la página e inicia una nueva conversación.';
-        }
-        if (message.includes('network') || message.includes('unavailable')) {
-            return 'Error de conexión. Verifica tu internet e intenta de nuevo.';
-        }
-        return 'No se pudo enviar el mensaje. Intenta de nuevo en unos segundos.';
-    };
 
     const normalizeTokenKey = (token) => String(token || '').replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 160);
 
@@ -1040,10 +874,6 @@ function initChatWidget() {
             visitorPresenceRef.off();
             visitorPresenceRef = null;
         }
-        if (connectedRef) {
-            connectedRef.off();
-            connectedRef = null;
-        }
     };
 
     const applyConversationStatus = (status) => {
@@ -1168,6 +998,7 @@ function initChatWidget() {
             window.localStorage.setItem(CHAT_PROFILE_KEY, JSON.stringify(activeProfile));
 
             const conversationId = ensureConversationId();
+            const nowIso = new Date().toISOString();
 
             const submitButton = chatForm.querySelector('button[type="submit"]');
             if (submitButton) submitButton.disabled = true;
@@ -1180,27 +1011,54 @@ function initChatWidget() {
                 return;
             }
 
-            submitVisitorMessageSecure({
+            const conversationPayload = {
                 conversationId,
+                visitorId: verifiedVisitorId,
                 visitorName: name,
                 visitorContact: contact,
-                text: message
-            }).then((res) => {
-                const resolvedConversationId = String(res.conversationId || conversationId);
-                activeConversationId = resolvedConversationId;
-                window.localStorage.setItem(CHAT_STORAGE_KEY, resolvedConversationId);
+                status: 'open',
+                source: 'web_portfolio_widget',
+                createdAtIso: nowIso,
+                updatedAtIso: nowIso,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                lastMessage: '',
+                unreadForAdmin: 0,
+                unreadForVisitor: 0
+            };
+
+            const messagePayload = {
+                senderType: 'visitor',
+                text: message,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                createdAtIso: nowIso,
+                visitorId: verifiedVisitorId,
+                conversationId,
+                seenByAdmin: false,
+                seenByVisitor: true
+            };
+
+            firebase.database().ref(`conversations/${conversationId}`).set(conversationPayload)
+                .then(() => firebase.database().ref(`messages/${conversationId}`).push(messagePayload))
+                .then(() => firebase.database().ref(`conversations/${conversationId}`).update({
+                    lastMessage: message,
+                    status: 'open',
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                    updatedAtIso: nowIso,
+                    unreadForAdmin: firebase.database.ServerValue.increment(1)
+                }))
+                .then(() => firebase.database().ref('mensajes_contacto').push({
+                    nombre: name,
+                    contacto: contact,
+                    mensaje: message,
+                    conversationId,
+                    fecha: new Date().toLocaleString('es-NI', { timeZone: 'America/Managua' })
+                }))
+                .then(() => {
                 ensureVisitorMessaging(verifiedVisitorId);
-                mountConversationView(resolvedConversationId);
+                mountConversationView(conversationId);
             }).catch((error) => {
                 console.error('Error al iniciar chat:', error);
-                const eCode = String((error && error.code) || '').toLowerCase();
-                const eMsg = String((error && error.message) || '').toLowerCase();
-                const isPermDenied = eCode.includes('permission_denied') || eCode.includes('permission-denied') || eMsg.includes('permission_denied') || eMsg.includes('permission denied');
-                if (isPermDenied) {
-                    activeConversationId = '';
-                    window.localStorage.removeItem(CHAT_STORAGE_KEY);
-                }
-                alert(resolveSubmitError(error));
                 if (submitButton) submitButton.disabled = false;
             });
         });
@@ -1255,6 +1113,7 @@ function initChatWidget() {
                     updates[`messages/${conversationId}/${entry.id}/seenByVisitor`] = true;
                     updates[`messages/${conversationId}/${entry.id}/seenAtVisitor`] = nowIso;
                 });
+                updates[`conversations/${conversationId}/unreadForVisitor`] = 0;
                 firebase.database().ref().update(updates).catch(() => {});
 
                 const latest = adminUnread[adminUnread.length - 1];
@@ -1307,11 +1166,10 @@ function initChatWidget() {
 
         const visitorId = ensureVisitorId();
         ensureVisitorMessaging(visitorId);
-        connectedRef = firebase.database().ref('.info/connected');
+        const connectedRef = firebase.database().ref('.info/connected');
         visitorPresenceRef = firebase.database().ref(`presence/${conversationId}/visitor`);
         connectedRef.on('value', (snap) => {
             if (snap.val() !== true) return;
-            if (!visitorPresenceRef) return;
             visitorPresenceRef.onDisconnect().set({
                 uid: visitorId,
                 isOnline: false,
@@ -1377,6 +1235,8 @@ function initChatWidget() {
             if (!text) return;
 
             lastSendAt = now;
+            const nowIso = new Date().toISOString();
+
             const sendButton = liveForm.querySelector('button[type="submit"]');
             if (sendButton) sendButton.disabled = true;
 
@@ -1388,17 +1248,26 @@ function initChatWidget() {
                 return;
             }
 
-            submitVisitorMessageSecure({
+            const payload = {
+                senderType: 'visitor',
+                text,
+                visitorId: verifiedVisitorId,
                 conversationId,
-                visitorName: activeProfile.name,
-                visitorContact: activeProfile.contact,
-                text
-            }).then((res) => {
-                const resolvedConversationId = String(res.conversationId || conversationId);
-                if (resolvedConversationId !== conversationId) {
-                    activeConversationId = resolvedConversationId;
-                    window.localStorage.setItem(CHAT_STORAGE_KEY, resolvedConversationId);
-                }
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                createdAtIso: nowIso,
+                seenByAdmin: false,
+                seenByVisitor: true
+            };
+
+            firebase.database().ref(`messages/${conversationId}`).push(payload)
+                .then(() => firebase.database().ref(`conversations/${conversationId}`).update({
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP,
+                    updatedAtIso: nowIso,
+                    lastMessage: text,
+                    status: 'open',
+                    unreadForAdmin: firebase.database.ServerValue.increment(1)
+                }))
+                .then(() => {
                 liveMessage.value = '';
                 visitorTypingRef.set({
                     isTyping: false,
@@ -1408,39 +1277,17 @@ function initChatWidget() {
                 if (sendButton) sendButton.disabled = false;
             }).catch((error) => {
                 console.error('Error al enviar mensaje:', error);
-                const eCode = String((error && error.code) || '').toLowerCase();
-                const eMsg = String((error && error.message) || '').toLowerCase();
-                const isPermDenied = eCode.includes('permission_denied') || eCode.includes('permission-denied') || eMsg.includes('permission_denied') || eMsg.includes('permission denied');
-                if (isPermDenied) {
-                    // Rules blocked the write — reset so user can start a new conversation
-                    activeConversationId = '';
-                    window.localStorage.removeItem(CHAT_STORAGE_KEY);
-                    clearRealtimeRefs();
-                    renderEntryForm();
-                    return;
-                }
-                alert(resolveSubmitError(error));
                 if (sendButton) sendButton.disabled = false;
             });
         });
     };
 
     window.addEventListener('scroll', () => {
-        if (scrollRaf) return;
-        scrollRaf = window.requestAnimationFrame(() => {
-            scrollRaf = 0;
-            if (!chatHiddenByScroll) {
-                chatBtn.classList.add('scroll-hide');
-                chatHiddenByScroll = true;
-            }
-
-            window.clearTimeout(scrollTimeout);
-            scrollTimeout = window.setTimeout(() => {
-                if (!chatHiddenByScroll) return;
-                chatBtn.classList.remove('scroll-hide');
-                chatHiddenByScroll = false;
-            }, 350);
-        });
+        chatBtn.classList.add('scroll-hide');
+        window.clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+            chatBtn.classList.remove('scroll-hide');
+        }, 350);
     }, { passive: true });
 
     chatBtn.addEventListener('click', () => {
@@ -1499,7 +1346,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let resumeTimer;
     let isPaused = false;
     let isUserInteracting = false;
-    let scrollRaf = 0;
 
     const scrollToCard = (index) => {
         const targetCard = galleryCards[index];
@@ -1532,7 +1378,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const startAutoScroll = () => {
         stopAutoScroll();
         autoScrollTimer = setInterval(() => {
-            if (isPaused || isUserInteracting || document.hidden) return;
+            if (isPaused || isUserInteracting) return;
 
             currentIndex = (currentIndex + 1) % galleryCards.length;
             scrollToCard(currentIndex);
@@ -1571,13 +1417,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     galleryCarousel.addEventListener('scroll', () => {
-        if (isUserInteracting || scrollRaf) return;
-        scrollRaf = window.requestAnimationFrame(() => {
-            scrollRaf = 0;
-            pauseAutoScroll();
-            resumeAutoScroll();
-        });
-    }, { passive: true });
+        if (isUserInteracting) return;
+        pauseAutoScroll();
+        resumeAutoScroll();
+    });
 
     galleryCarousel.addEventListener('mouseenter', () => {
         pauseAutoScroll();
