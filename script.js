@@ -970,6 +970,12 @@ function initChatWidget() {
                 return false;
             }
 
+            const messageSnap = await firebase.database().ref(`messages/${activeConversationId}`).limitToFirst(1).once('value');
+            if (!messageSnap.exists()) {
+                resetActiveConversationState();
+                return false;
+            }
+
             return true;
         } catch (error) {
             const code = String((error && error.code) || '').toLowerCase();
@@ -978,6 +984,22 @@ function initChatWidget() {
             }
             return false;
         }
+    };
+
+    const resolveSubmitError = (error) => {
+        const code = String((error && error.code) || '').toLowerCase();
+        const message = String((error && error.message) || '').toLowerCase();
+
+        if (code.includes('unauthenticated')) {
+            return 'No se pudo validar tu sesión. Recarga la página e intenta de nuevo.';
+        }
+        if (code.includes('permission_denied') || code.includes('permission-denied') || message.includes('permission denied')) {
+            return 'Firebase rechazó la escritura por reglas o sesión. Se reiniciará el chat para que vuelvas a iniciar.';
+        }
+        if (message.includes('network') || message.includes('unavailable')) {
+            return 'Error de conexión. Verifica tu internet e intenta nuevamente.';
+        }
+        return 'No se pudo enviar el mensaje. Intenta de nuevo en unos segundos.';
     };
 
     const formatClock = (timestamp) => {
@@ -1026,6 +1048,7 @@ function initChatWidget() {
             if (!nameInput || !contactInput || !messageInput) return;
             if (typeof firebase === 'undefined') {
                 console.error('Firebase no está disponible en el cliente.');
+                alert('Firebase no está disponible en este momento.');
                 return;
             }
 
@@ -1046,9 +1069,10 @@ function initChatWidget() {
 
             await authReadyPromise;
             const verifiedVisitorId = ensureVisitorId();
-            if (!verifiedVisitorId) {
+            if (!verifiedVisitorId || !getAuthUid()) {
                 if (submitButton) submitButton.disabled = false;
                 console.error('No fue posible autenticar visitante para iniciar el chat.');
+                alert('No se pudo autenticar el chat. Recarga la página e intenta de nuevo.');
                 return;
             }
 
@@ -1100,6 +1124,7 @@ function initChatWidget() {
                 console.error('Error al iniciar chat:', error);
                 resetActiveConversationState();
                 if (submitButton) submitButton.disabled = false;
+                alert(resolveSubmitError(error));
             });
         });
     };
@@ -1185,6 +1210,7 @@ function initChatWidget() {
             <p class="chat-welcome">💬 Chat activo. Este historial se mantiene para este navegador.</p>
             <p id="chat-status-label" class="chat-status-label">Chat en linea con HarinRC.</p>
             <p id="chat-typing-indicator" class="chat-typing-indicator" hidden>HarinRC esta escribiendo...</p>
+            <button id="chat-reset-btn" type="button" class="chat-submit-btn" style="margin-bottom:10px;">Iniciar Nuevo Chat</button>
             <div id="chat-thread" class="chat-thread" aria-live="polite"></div>
             <form id="chat-live-form" class="chat-live-form">
                 <div class="chat-input-group">
@@ -1198,7 +1224,16 @@ function initChatWidget() {
         const liveForm = document.getElementById('chat-live-form');
         const liveMessage = document.getElementById('chat-live-message');
         const typingIndicator = document.getElementById('chat-typing-indicator');
+        const resetBtn = document.getElementById('chat-reset-btn');
         if (!liveForm || !liveMessage) return;
+
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                clearRealtimeRefs();
+                resetActiveConversationState();
+                renderEntryForm();
+            });
+        }
 
         unreadAdminCount = 0;
         updateBadge();
@@ -1281,9 +1316,10 @@ function initChatWidget() {
 
             await authReadyPromise;
             const verifiedVisitorId = ensureVisitorId();
-            if (!verifiedVisitorId) {
+            if (!verifiedVisitorId || !getAuthUid()) {
                 if (sendButton) sendButton.disabled = false;
                 console.error('No fue posible autenticar visitante para enviar mensajes.');
+                alert('No se pudo autenticar la sesión del chat. Recarga la página.');
                 return;
             }
 
@@ -1314,6 +1350,13 @@ function initChatWidget() {
             }).catch((error) => {
                 console.error('Error al enviar mensaje:', error);
                 if (sendButton) sendButton.disabled = false;
+                const code = String((error && error.code) || '').toLowerCase();
+                if (code.includes('permission_denied') || code.includes('permission-denied')) {
+                    clearRealtimeRefs();
+                    resetActiveConversationState();
+                    renderEntryForm();
+                }
+                alert(resolveSubmitError(error));
             });
         });
     };
