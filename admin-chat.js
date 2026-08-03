@@ -46,6 +46,9 @@
     let messaging = null;
     let swReg = null;
     let deferredInstallPrompt = null;
+    let lastRenderedAdminConversationId = '';
+    let hasRenderedAdminThread = false;
+    const notifiedAdminMessageKeys = new Set();
 
     function formatDate(ts) {
         if (!ts) return '--:--';
@@ -64,6 +67,31 @@
 
     function sanitize(text) {
         return String(text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function isNearBottom(element, threshold = 56) {
+        if (!element) return true;
+        const distance = element.scrollHeight - element.scrollTop - element.clientHeight;
+        return distance <= threshold;
+    }
+
+    function syncThreadScroll(element, shouldStick, previousBottomOffset) {
+        if (!element) return;
+        if (shouldStick) {
+            element.scrollTop = element.scrollHeight;
+            return;
+        }
+
+        element.scrollTop = Math.max(0, element.scrollHeight - previousBottomOffset);
+    }
+
+    function buildAdminNotifyKey(data) {
+        return [
+            String(data.conversationId || ''),
+            String(data.messageId || ''),
+            String(data.createdAt || ''),
+            String(data.text || '')
+        ].join('::');
     }
 
     function setView(view) {
@@ -197,11 +225,14 @@
         });
     }
 
-    function renderMessages(messages) {
+    function renderMessages(messages, options = {}) {
         if (!messages.length) {
             threadMessagesEl.innerHTML = '<p class="thread-empty">Sin mensajes en esta conversacion.</p>';
             return;
         }
+
+        const shouldStickToBottom = options.forceScrollToBottom || isNearBottom(threadMessagesEl);
+        const previousBottomOffset = Math.max(0, threadMessagesEl.scrollHeight - threadMessagesEl.scrollTop);
 
         threadMessagesEl.innerHTML = messages.map((msg) => {
             const senderType = msg.senderType === 'admin' ? 'admin' : 'visitor';
@@ -218,7 +249,7 @@
             `;
         }).join('');
 
-        threadMessagesEl.scrollTop = threadMessagesEl.scrollHeight;
+        syncThreadScroll(threadMessagesEl, shouldStickToBottom, previousBottomOffset);
     }
 
     function watchConversations() {
@@ -244,6 +275,10 @@
 
     function openConversation(conversation) {
         selectedConversation = conversation;
+        if (lastRenderedAdminConversationId !== conversation.id) {
+            lastRenderedAdminConversationId = conversation.id;
+            hasRenderedAdminThread = false;
+        }
         threadHeaderEl.textContent = `${conversation.visitorName || 'Visitante'} · ${conversation.visitorContact || 'Sin contacto'}`;
         sendBtn.disabled = false;
         closeConversationBtn.disabled = false;
@@ -262,7 +297,8 @@
                 .map((id) => ({ id, ...raw[id] }))
                 .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
 
-            renderMessages(messages);
+            renderMessages(messages, { forceScrollToBottom: !hasRenderedAdminThread });
+            hasRenderedAdminThread = true;
 
             const unreadForAdmin = messages.filter((msg) => msg.senderType !== 'admin' && !msg.seenByAdmin);
             if (unreadForAdmin.length) {
@@ -528,15 +564,26 @@
             }
             messaging.onMessage((payload) => {
                 const data = payload && payload.data ? payload.data : {};
-                const text = data.text || 'Nuevo mensaje del visitante';
-                if (!document.hidden) {
-                    const existing = threadMessagesEl.querySelector('.thread-empty');
-                    if (existing) return;
+                const notifyKey = buildAdminNotifyKey(data);
+                if (notifiedAdminMessageKeys.has(notifyKey)) return;
+
+                notifiedAdminMessageKeys.add(notifyKey);
+                if (notifiedAdminMessageKeys.size > 80) {
+                    const oldestKey = notifiedAdminMessageKeys.values().next().value;
+                    notifiedAdminMessageKeys.delete(oldestKey);
                 }
+
+                const text = data.text || 'Nuevo mensaje del visitante';
+                const conversationId = String(data.conversationId || '');
+                const isActiveConversation = !!selectedConversation && selectedConversation.id === conversationId;
+                if (!document.hidden && isActiveConversation) return;
+
                 if ('Notification' in window && Notification.permission === 'granted') {
                     new Notification('Nuevo chat recibido', {
                         body: String(text).slice(0, 140),
-                        icon: 'favicon.png'
+                        icon: 'favicon.png',
+                        tag: notifyKey,
+                        renotify: false
                     });
                 }
             });

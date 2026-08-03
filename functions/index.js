@@ -75,17 +75,15 @@ exports.pushOnVisitorMessage = functions.database
         body: text || 'Te escribieron en el chat',
         text,
         conversationId,
+        messageId: context.params.messageId,
+        createdAt: String(message.createdAt || ''),
+        senderType: 'visitor',
         url: ADMIN_CHAT_URL,
         click_action: ADMIN_CHAT_URL
       },
       webpush: {
         fcmOptions: {
           link: ADMIN_CHAT_URL
-        },
-        notification: {
-          title: 'Nuevo mensaje de visitante',
-          body: text || 'Te escribieron en el chat',
-          icon: 'https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/favicon.png'
         }
       }
     };
@@ -141,17 +139,15 @@ exports.pushOnAdminMessage = functions.database
         body: text || 'Tienes una nueva respuesta',
         text,
         conversationId,
+        messageId: context.params.messageId,
+        createdAt: String(message.createdAt || ''),
+        senderType: 'admin',
         url: WEB_CHAT_URL,
         click_action: WEB_CHAT_URL
       },
       webpush: {
         fcmOptions: {
           link: WEB_CHAT_URL
-        },
-        notification: {
-          title: 'HarinRC respondio tu chat',
-          body: text || 'Tienes una nueva respuesta',
-          icon: 'https://harinrc.github.io/harinto-rodriguez-cruz-portafolio/favicon.png'
         }
       }
     };

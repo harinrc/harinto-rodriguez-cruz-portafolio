@@ -741,7 +741,11 @@ function initChatWidget() {
     let unreadAdminCount = 0;
     let notificationPermissionRequested = false;
     let conversationRecoveryAttempted = false;
+    let hasRenderedVisitorThread = false;
+    let lastRenderedVisitorConversationId = '';
+    let lastVisitorNotifiedMessageId = '';
     const VISITOR_VAPID_PUBLIC_KEY = 'REEMPLAZA_CON_TU_VAPID_KEY_PUBLICA';
+    const foregroundVisitorNotifications = new Set();
 
     const getAuthUid = () => {
         const currentUser = auth.currentUser;
@@ -836,6 +840,34 @@ function initChatWidget() {
                 if (VISITOR_VAPID_PUBLIC_KEY && !VISITOR_VAPID_PUBLIC_KEY.startsWith('REEMPLAZA_')) {
                     visitorMessagingRef.usePublicVapidKey(VISITOR_VAPID_PUBLIC_KEY);
                 }
+
+                visitorMessagingRef.onMessage((payload) => {
+                    const data = payload && payload.data ? payload.data : {};
+                    const notifyKey = [data.conversationId || activeConversationId || '', data.messageId || '', data.createdAt || '', data.text || ''].join('::');
+                    if (!notifyKey || notifyKey === lastVisitorNotifiedMessageId || foregroundVisitorNotifications.has(notifyKey)) return;
+
+                    foregroundVisitorNotifications.add(notifyKey);
+                    lastVisitorNotifiedMessageId = notifyKey;
+                    if (foregroundVisitorNotifications.size > 80) {
+                        const oldestKey = foregroundVisitorNotifications.values().next().value;
+                        foregroundVisitorNotifications.delete(oldestKey);
+                    }
+
+                    if (!(document.hidden || chatWindow.classList.contains('hidden'))) return;
+
+                    unreadAdminCount += 1;
+                    updateBadge();
+                    playNotificationTone();
+
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification(data.title || 'HarinRC respondió', {
+                            body: String(data.text || data.body || 'Tienes una nueva respuesta').slice(0, 140),
+                            icon: 'favicon.png',
+                            tag: notifyKey,
+                            renotify: false
+                        });
+                    }
+                });
             }
 
             if ('Notification' in window && Notification.permission === 'default') {
@@ -889,9 +921,14 @@ function initChatWidget() {
         }
     };
 
-    const maybeNotifyAdminReply = (text) => {
+    const maybeNotifyAdminReply = (entry) => {
         const canNotify = document.hidden || chatWindow.classList.contains('hidden');
         if (!canNotify) return;
+
+        const notifyKey = buildVisitorNotificationKey(entry);
+        if (!notifyKey || notifyKey === lastVisitorNotifiedMessageId) return;
+
+        lastVisitorNotifiedMessageId = notifyKey;
 
         unreadAdminCount += 1;
         updateBadge();
@@ -899,10 +936,12 @@ function initChatWidget() {
 
         if (!('Notification' in window)) return;
         if (Notification.permission === 'granted') {
-            const body = String(text || 'Tienes una nueva respuesta en tu chat.').slice(0, 140);
+            const body = String((entry && entry.text) || 'Tienes una nueva respuesta en tu chat.').slice(0, 140);
             new Notification('HarinRC respondió', {
                 body,
-                icon: 'favicon.png'
+                icon: 'favicon.png',
+                tag: notifyKey,
+                renotify: false
             });
         }
     };
@@ -914,6 +953,27 @@ function initChatWidget() {
         if (Notification.permission === 'default') {
             Notification.requestPermission().catch(() => {});
         }
+    };
+
+    const isNearBottom = (element, threshold = 56) => {
+        if (!element) return true;
+        const distance = element.scrollHeight - element.scrollTop - element.clientHeight;
+        return distance <= threshold;
+    };
+
+    const syncThreadScroll = (element, shouldStick, previousBottomOffset) => {
+        if (!element) return;
+        if (shouldStick) {
+            element.scrollTop = element.scrollHeight;
+            return;
+        }
+
+        element.scrollTop = Math.max(0, element.scrollHeight - previousBottomOffset);
+    };
+
+    const buildVisitorNotificationKey = (entry) => {
+        if (!entry) return '';
+        return [entry.conversationId || activeConversationId || '', entry.id || '', entry.createdAt || '', entry.text || ''].join('::');
     };
 
     const clearRealtimeRefs = () => {
@@ -1155,7 +1215,7 @@ function initChatWidget() {
         });
     };
 
-    const renderMessages = (messagesList = []) => {
+    const renderMessages = (messagesList = [], options = {}) => {
         const thread = document.getElementById('chat-thread');
         if (!thread) return;
 
@@ -1163,6 +1223,9 @@ function initChatWidget() {
             thread.innerHTML = '<p class="chat-empty">Aun no hay mensajes. Escribe para iniciar la conversacion.</p>';
             return;
         }
+
+        const shouldStickToBottom = options.forceScrollToBottom || isNearBottom(thread);
+        const previousBottomOffset = Math.max(0, thread.scrollHeight - thread.scrollTop);
 
         thread.innerHTML = messagesList.map((entry) => {
             const isVisitor = entry.senderType !== 'admin';
@@ -1180,7 +1243,7 @@ function initChatWidget() {
             `;
         }).join('');
 
-        thread.scrollTop = thread.scrollHeight;
+        syncThreadScroll(thread, shouldStickToBottom, previousBottomOffset);
     };
 
     const subscribeConversationMessages = (conversationId) => {
@@ -1195,7 +1258,8 @@ function initChatWidget() {
             const list = Object.keys(rawMessages)
                 .map((key) => ({ id: key, ...rawMessages[key] }))
                 .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-            renderMessages(list);
+            renderMessages(list, { forceScrollToBottom: !hasRenderedVisitorThread });
+            hasRenderedVisitorThread = true;
 
             const adminUnread = list.filter((entry) => entry.senderType === 'admin' && !entry.seenByVisitor);
             if (adminUnread.length) {
@@ -1209,7 +1273,7 @@ function initChatWidget() {
                 db.ref().update(updates).catch(() => {});
 
                 const latest = adminUnread[adminUnread.length - 1];
-                maybeNotifyAdminReply(latest.text || 'Nueva respuesta');
+                maybeNotifyAdminReply(latest);
             }
         }, (error) => {
             const errorCode = error && error.code ? String(error.code).toLowerCase() : '';
@@ -1246,6 +1310,11 @@ function initChatWidget() {
 
     const mountConversationView = (conversationId) => {
         clearRealtimeRefs();
+        if (lastRenderedVisitorConversationId !== conversationId) {
+            lastRenderedVisitorConversationId = conversationId;
+            hasRenderedVisitorThread = false;
+            lastVisitorNotifiedMessageId = '';
+        }
 
         chatBody.innerHTML = `
             <p class="chat-welcome">💬 Chat activo. Este historial se mantiene para este navegador.</p>

@@ -57,13 +57,19 @@ if (firebase.messaging.isSupported()) {
     const title = data.title || 'Nuevo mensaje';
     const body = data.body || data.text || 'Tienes un nuevo mensaje en Admin Chat';
     const conversationId = data.conversationId || '';
+    const targetUrl = data.url || './admin-chat.html';
+    const messageId = data.messageId || '';
+    const createdAt = data.createdAt || '';
+    const notificationTag = ['chat', conversationId, messageId, createdAt].join('-');
 
     return self.registration.showNotification(title, {
       body,
       icon: './favicon.png',
       badge: './favicon.png',
+      tag: notificationTag,
+      renotify: false,
       data: {
-        url: './admin-chat.html',
+        url: targetUrl,
         conversationId
       }
     });

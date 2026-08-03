@@ -65,6 +65,7 @@
     "messages": {
       "$conversationId": {
         ".read": "auth != null && (root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid || root.child('admins').child(auth.uid).val() === true)",
+        ".write": "auth != null && !newData.exists() && root.child('admins').child(auth.uid).val() === true",
         ".indexOn": ["createdAt"],
         "$messageId": {
           ".write": "auth != null && ((newData.child('senderType').val() === 'visitor' && root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid && newData.child('visitorId').val() === auth.uid) || (root.child('admins').child(auth.uid).val() === true && newData.child('senderType').val() === 'admin'))",
@@ -107,6 +108,7 @@
 
     "typing": {
       "$conversationId": {
+        ".write": "auth != null && !newData.exists() && root.child('admins').child(auth.uid).val() === true",
         "visitor": {
           ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid)",
           ".write": "auth != null && root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid",
@@ -122,6 +124,7 @@
 
     "presence": {
       "$conversationId": {
+        ".write": "auth != null && !newData.exists() && root.child('admins').child(auth.uid).val() === true",
         "visitor": {
           ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid)",
           ".write": "auth != null && root.child('conversations').child($conversationId).child('visitorId').val() === auth.uid",
