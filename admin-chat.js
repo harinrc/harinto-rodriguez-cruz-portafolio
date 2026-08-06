@@ -18,6 +18,7 @@
     const replyForm = document.getElementById('admin-reply-form');
     const replyInput = document.getElementById('admin-reply-input');
     const sendBtn = document.getElementById('admin-send-btn');
+    const replyCharCounterEl = document.getElementById('admin-char-counter');
     const closeConversationBtn = document.getElementById('admin-close-conversation-btn');
     const deleteConversationBtn = document.getElementById('admin-delete-conversation-btn');
 
@@ -225,6 +226,50 @@
         });
     }
 
+    function getDayKey(timestamp) {
+        if (!timestamp) return 'sin-fecha';
+        const date = new Date(timestamp);
+        return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    }
+
+    function formatDaySeparatorLabel(timestamp) {
+        if (!timestamp) return 'Sin fecha';
+        const date = new Date(timestamp);
+        const now = new Date();
+        const startOfDay = (value) => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+        const diffDays = Math.round((startOfDay(now) - startOfDay(date)) / 86400000);
+        if (diffDays === 0) return 'Hoy';
+        if (diffDays === 1) return 'Ayer';
+        try {
+            return date.toLocaleDateString('es-NI', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Managua' });
+        } catch (_error) {
+            return date.toLocaleDateString();
+        }
+    }
+
+    function buildAdminSeenLabel(msg) {
+        const senderType = msg.senderType === 'admin' ? 'admin' : 'visitor';
+        return senderType === 'admin'
+            ? (msg.seenByVisitor ? 'Leido por visitante' : 'Enviado')
+            : (msg.seenByAdmin ? 'Leido por HarinRC' : 'Enviado');
+    }
+
+    function buildAdminMessageRowHtml(msg) {
+        const senderType = msg.senderType === 'admin' ? 'admin' : 'visitor';
+        const text = sanitize(msg.text);
+        const who = senderType === 'admin' ? 'Tu' : 'Visitante';
+        return `
+            <div class="msg-row ${senderType}" data-msg-id="${msg.id}">
+                <div class="msg-bubble">${text}</div>
+                <span class="msg-meta">${who} · ${formatDate(msg.createdAt)} · ${buildAdminSeenLabel(msg)}</span>
+            </div>
+        `;
+    }
+
+    function buildAdminDateSeparatorHtml(timestamp) {
+        return `<div class="thread-date-separator"><span>${formatDaySeparatorLabel(timestamp)}</span></div>`;
+    }
+
     function renderMessages(messages, options = {}) {
         if (!messages.length) {
             threadMessagesEl.innerHTML = '<p class="thread-empty">Sin mensajes en esta conversacion.</p>';
@@ -234,20 +279,52 @@
         const shouldStickToBottom = options.forceScrollToBottom || isNearBottom(threadMessagesEl);
         const previousBottomOffset = Math.max(0, threadMessagesEl.scrollHeight - threadMessagesEl.scrollTop);
 
-        threadMessagesEl.innerHTML = messages.map((msg) => {
-            const senderType = msg.senderType === 'admin' ? 'admin' : 'visitor';
-            const text = sanitize(msg.text);
-            const who = senderType === 'admin' ? 'Tu' : 'Visitante';
-            const seen = senderType === 'admin'
-                ? (msg.seenByVisitor ? 'Leido por visitante' : 'Enviado')
-                : (msg.seenByAdmin ? 'Leido por HarinRC' : 'Enviado');
-            return `
-                <div class="msg-row ${senderType}">
-                    <div class="msg-bubble">${text}</div>
-                    <span class="msg-meta">${who} · ${formatDate(msg.createdAt)} · ${seen}</span>
-                </div>
-            `;
-        }).join('');
+        // Renderizado incremental (igual que en el widget del visitante):
+        // solo se agregan los mensajes nuevos y se actualiza el estado de
+        // los existentes, en vez de reconstruir todo el hilo en cada evento.
+        const existingRowsById = new Map();
+        threadMessagesEl.querySelectorAll('[data-msg-id]').forEach((el) => {
+            existingRowsById.set(el.getAttribute('data-msg-id'), el);
+        });
+        const existingIds = Array.from(existingRowsById.keys());
+        const newIds = messages.map((msg) => msg.id);
+        const canPatchInPlace = existingIds.length > 0
+            && existingIds.length <= newIds.length
+            && existingIds.every((id, index) => id === newIds[index]);
+
+        if (!canPatchInPlace) {
+            let lastDayKey = '';
+            threadMessagesEl.innerHTML = messages.map((msg) => {
+                const dayKey = getDayKey(msg.createdAt);
+                const separator = dayKey !== lastDayKey ? buildAdminDateSeparatorHtml(msg.createdAt) : '';
+                lastDayKey = dayKey;
+                return separator + buildAdminMessageRowHtml(msg);
+            }).join('');
+        } else {
+            for (let index = 0; index < existingIds.length; index += 1) {
+                const msg = messages[index];
+                const row = existingRowsById.get(msg.id);
+                if (!row) continue;
+                const metaEl = row.querySelector('.msg-meta');
+                const who = msg.senderType === 'admin' ? 'Tu' : 'Visitante';
+                const newMetaText = `${who} · ${formatDate(msg.createdAt)} · ${buildAdminSeenLabel(msg)}`;
+                if (metaEl && metaEl.textContent !== newMetaText) {
+                    metaEl.textContent = newMetaText;
+                }
+            }
+
+            const tail = messages.slice(existingIds.length);
+            if (tail.length) {
+                let lastDayKey = getDayKey(messages[existingIds.length - 1].createdAt);
+                const tailHtml = tail.map((msg) => {
+                    const dayKey = getDayKey(msg.createdAt);
+                    const separator = dayKey !== lastDayKey ? buildAdminDateSeparatorHtml(msg.createdAt) : '';
+                    lastDayKey = dayKey;
+                    return separator + buildAdminMessageRowHtml(msg);
+                }).join('');
+                threadMessagesEl.insertAdjacentHTML('beforeend', tailHtml);
+            }
+        }
 
         syncThreadScroll(threadMessagesEl, shouldStickToBottom, previousBottomOffset);
     }
@@ -390,6 +467,9 @@
                 unreadForVisitor: firebase.database.ServerValue.increment(1)
             });
             replyInput.value = '';
+            if (replyCharCounterEl) {
+                replyCharCounterEl.textContent = '0/420';
+            }
             if (adminTypingRef) {
                 adminTypingRef.set({
                     isTyping: false,
@@ -627,7 +707,21 @@
     replyForm.addEventListener('submit', sendReply);
     closeConversationBtn.addEventListener('click', closeConversation);
     deleteConversationBtn.addEventListener('click', deleteConversation);
+    // Enter envia la respuesta; Shift+Enter inserta un salto de linea.
+    replyInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            if (typeof replyForm.requestSubmit === 'function') {
+                replyForm.requestSubmit();
+            } else {
+                replyForm.dispatchEvent(new Event('submit', { cancelable: true }));
+            }
+        }
+    });
     replyInput.addEventListener('input', () => {
+        if (replyCharCounterEl) {
+            replyCharCounterEl.textContent = `${replyInput.value.length}/420`;
+        }
         if (!selectedConversation || !adminTypingRef) return;
         adminTypingRef.set({
             isTyping: replyInput.value.trim().length > 0,

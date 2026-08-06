@@ -326,6 +326,23 @@ body {
     color: var(--muted);
 }
 
+.thread-date-separator {
+    display: flex;
+    justify-content: center;
+    margin: 4px 0;
+}
+
+.thread-date-separator span {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 3px 10px;
+    border-radius: 999px;
+}
+
 .admin-reply-form {
     padding: 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -341,6 +358,15 @@ body {
     padding: 10px;
     resize: vertical;
     margin-bottom: 10px;
+}
+
+.admin-char-counter {
+    display: block;
+    text-align: right;
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin: -4px 0 10px;
+    opacity: 0.85;
 }
 
 .admin-reply-actions {

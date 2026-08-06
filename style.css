@@ -1325,6 +1325,32 @@ body.chat-open::before {
     opacity: 0.85;
 }
 
+.chat-date-separator {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
+}
+
+.chat-date-separator span {
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 3px 10px;
+    border-radius: 999px;
+}
+
+.chat-char-counter {
+    display: block;
+    text-align: right;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    opacity: 0.85;
+}
+
 .chat-live-form {
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     padding-top: 12px;

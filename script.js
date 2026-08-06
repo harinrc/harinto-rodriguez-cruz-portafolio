@@ -9,10 +9,16 @@ const performanceProfile = (() => {
     const hasDeviceMemory = typeof navigator.deviceMemory === 'number';
     const memory = hasDeviceMemory ? navigator.deviceMemory : null;
     const isLowEndDevice = cores <= 4 || (hasDeviceMemory && memory <= 4);
+    // navigator.deviceMemory no existe en iOS Safari, asi que se usa
+    // "pointer: coarse" como señal adicional de dispositivo tactil/movil.
+    // Solo se usa para aligerar el canvas de fondo (ver initPcbBackground),
+    // no afecta el resto de animaciones/estilos del sitio.
+    const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
 
     return {
         prefersReducedMotion,
         isLowEndDevice,
+        isTouchDevice,
         shouldReduceEffects: prefersReducedMotion || isLowEndDevice
     };
 })();
@@ -49,19 +55,43 @@ function initPcbBackground() {
     let tracks = [];
     let pulses = [];
     let animationFrameId;
-    const totalTracks = performanceProfile.shouldReduceEffects ? 22 : 45;
-    const pulseSpawnThreshold = performanceProfile.shouldReduceEffects ? 0.65 : 0.2;
+    // El fondo PCB es puramente decorativo: en pantallas tactiles (moviles/
+    // tablets) se reduce su costo (menos trazos, menos pulsos, menos fps,
+    // menos glow) para evitar el sobrecalentamiento reportado, sin tocar
+    // el resto de animaciones/estilos del sitio.
+    const canvasShouldReduceEffects = performanceProfile.shouldReduceEffects || performanceProfile.isTouchDevice;
+    const totalTracks = canvasShouldReduceEffects ? 22 : 45;
+    const pulseSpawnThreshold = canvasShouldReduceEffects ? 0.65 : 0.2;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let lastFrameTime = 0;
     let resizeTimer;
+    let cachedColors = null;
 
     const getThemeColor = (name) => {
         return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     };
 
+    // Los colores del tema solo cambian al iniciar, al cambiar de tema o al
+    // redimensionar; leerlos con getComputedStyle en cada frame (hasta 60
+    // veces por segundo) forzaba recalculos de estilo constantes y era la
+    // causa principal del uso elevado de CPU/GPU. Ahora se cachean.
+    const refreshCachedColors = () => {
+        cachedColors = {
+            base: getThemeColor('--pcb-base'),
+            trackShadow: getThemeColor('--pcb-track-shadow'),
+            track: getThemeColor('--pcb-track'),
+            node: getThemeColor('--pcb-node'),
+            hole: getThemeColor('--pcb-hole'),
+            pulseGlow: getThemeColor('--pcb-pulse-glow'),
+            pulseCore: getThemeColor('--pcb-pulse-core'),
+            pulseHot: getThemeColor('--pcb-pulse-hot')
+        };
+    };
+
     const resizeCanvas = () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+        refreshCachedColors();
         generateHardware();
         renderFrame();
     };
@@ -165,7 +195,7 @@ function initPcbBackground() {
         ctx.beginPath();
         ctx.arc(x, y, pulse.size, 0, Math.PI * 2);
         ctx.fillStyle = colors.pulseHot;
-        ctx.shadowBlur = performanceProfile.shouldReduceEffects ? 6 : 12;
+        ctx.shadowBlur = canvasShouldReduceEffects ? 6 : 12;
         ctx.shadowColor = colors.pulseCore;
         ctx.fill();
         ctx.shadowBlur = 0;
@@ -182,16 +212,8 @@ function initPcbBackground() {
     };
 
     function renderFrame() {
-        const colors = {
-            base: getThemeColor('--pcb-base'),
-            trackShadow: getThemeColor('--pcb-track-shadow'),
-            track: getThemeColor('--pcb-track'),
-            node: getThemeColor('--pcb-node'),
-            hole: getThemeColor('--pcb-hole'),
-            pulseGlow: getThemeColor('--pcb-pulse-glow'),
-            pulseCore: getThemeColor('--pcb-pulse-core'),
-            pulseHot: getThemeColor('--pcb-pulse-hot')
-        };
+        if (!cachedColors) refreshCachedColors();
+        const colors = cachedColors;
 
         ctx.fillStyle = colors.base;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -209,7 +231,7 @@ function initPcbBackground() {
             return;
         }
 
-        const minFrameTime = performanceProfile.shouldReduceEffects ? 33 : 16;
+        const minFrameTime = canvasShouldReduceEffects ? 33 : 16;
         if ((timestamp - lastFrameTime) >= minFrameTime) {
             renderFrame();
             lastFrameTime = timestamp;
@@ -233,7 +255,7 @@ function initPcbBackground() {
 
     window.addEventListener('resize', () => {
         window.clearTimeout(resizeTimer);
-        resizeTimer = window.setTimeout(resizeCanvas, performanceProfile.shouldReduceEffects ? 180 : 90);
+        resizeTimer = window.setTimeout(resizeCanvas, canvasShouldReduceEffects ? 180 : 90);
     });
 
     document.addEventListener('visibilitychange', () => {
@@ -253,6 +275,7 @@ function initPcbBackground() {
     const themeObserver = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
             if (mutation.attributeName === 'data-theme') {
+                refreshCachedColors();
                 renderFrame();
                 break;
             }
@@ -895,11 +918,27 @@ function initChatWidget() {
         badge.style.display = 'flex';
     };
 
+    // Se reutiliza un unico AudioContext en vez de crear uno nuevo (y nunca
+    // cerrarlo) en cada notificacion, lo que en sesiones largas acumulaba
+    // procesos de audio activos y contribuia al consumo de CPU/bateria.
+    let sharedNotificationAudioCtx = null;
+
+    const getNotificationAudioContext = () => {
+        const AudioContextRef = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextRef) return null;
+        if (!sharedNotificationAudioCtx) {
+            sharedNotificationAudioCtx = new AudioContextRef();
+        }
+        if (sharedNotificationAudioCtx.state === 'suspended') {
+            sharedNotificationAudioCtx.resume().catch(() => {});
+        }
+        return sharedNotificationAudioCtx;
+    };
+
     const playNotificationTone = () => {
         try {
-            const AudioContextRef = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContextRef) return;
-            const ctx = new AudioContextRef();
+            const ctx = getNotificationAudioContext();
+            if (!ctx) return;
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
 
@@ -1215,6 +1254,50 @@ function initChatWidget() {
         });
     };
 
+    const getDayKey = (timestamp) => {
+        if (!timestamp) return 'sin-fecha';
+        const date = new Date(timestamp);
+        return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    };
+
+    const formatDaySeparatorLabel = (timestamp) => {
+        if (!timestamp) return 'Sin fecha';
+        const date = new Date(timestamp);
+        const now = new Date();
+        const startOfDay = (value) => new Date(value.getFullYear(), value.getMonth(), value.getDate()).getTime();
+        const diffDays = Math.round((startOfDay(now) - startOfDay(date)) / 86400000);
+        if (diffDays === 0) return 'Hoy';
+        if (diffDays === 1) return 'Ayer';
+        try {
+            return date.toLocaleDateString('es-NI', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Managua' });
+        } catch (_error) {
+            return date.toLocaleDateString();
+        }
+    };
+
+    const buildVisitorSeenLabel = (entry) => {
+        const isVisitor = entry.senderType !== 'admin';
+        return !isVisitor
+            ? (entry.seenByVisitor ? 'Leido' : 'Enviado')
+            : (entry.seenByAdmin ? 'Leido por HarinRC' : 'Enviado');
+    };
+
+    const buildVisitorMessageRowHtml = (entry) => {
+        const isVisitor = entry.senderType !== 'admin';
+        const sideClass = isVisitor ? 'visitor' : 'admin';
+        const safeText = String(entry.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return `
+            <div class="chat-message ${sideClass}" data-msg-id="${entry.id}">
+                <div class="chat-message-bubble">${safeText}</div>
+                <span class="chat-message-time">${formatClock(entry.createdAt)} · ${buildVisitorSeenLabel(entry)}</span>
+            </div>
+        `;
+    };
+
+    const buildVisitorDateSeparatorHtml = (timestamp) => (
+        `<div class="chat-date-separator"><span>${formatDaySeparatorLabel(timestamp)}</span></div>`
+    );
+
     const renderMessages = (messagesList = [], options = {}) => {
         const thread = document.getElementById('chat-thread');
         if (!thread) return;
@@ -1227,21 +1310,53 @@ function initChatWidget() {
         const shouldStickToBottom = options.forceScrollToBottom || isNearBottom(thread);
         const previousBottomOffset = Math.max(0, thread.scrollHeight - thread.scrollTop);
 
-        thread.innerHTML = messagesList.map((entry) => {
-            const isVisitor = entry.senderType !== 'admin';
-            const sideClass = isVisitor ? 'visitor' : 'admin';
-            const safeText = String(entry.text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            const seenLabel = !isVisitor
-                ? (entry.seenByVisitor ? 'Leido' : 'Enviado')
-                : (entry.seenByAdmin ? 'Leido por HarinRC' : 'Enviado');
+        // Renderizado incremental: en vez de reconstruir todo el hilo con
+        // innerHTML en cada actualizacion de Firebase (costoso en hilos
+        // largos), solo se agregan los mensajes nuevos y se actualiza el
+        // estado "Enviado/Leido" de los existentes. Si el listado no
+        // coincide (p. ej. cambio de conversacion), se reconstruye completo.
+        const existingRowsById = new Map();
+        thread.querySelectorAll('[data-msg-id]').forEach((el) => {
+            existingRowsById.set(el.getAttribute('data-msg-id'), el);
+        });
+        const existingIds = Array.from(existingRowsById.keys());
+        const newIds = messagesList.map((entry) => entry.id);
+        const canPatchInPlace = existingIds.length > 0
+            && existingIds.length <= newIds.length
+            && existingIds.every((id, index) => id === newIds[index]);
 
-            return `
-                <div class="chat-message ${sideClass}">
-                    <div class="chat-message-bubble">${safeText}</div>
-                    <span class="chat-message-time">${formatClock(entry.createdAt)} · ${seenLabel}</span>
-                </div>
-            `;
-        }).join('');
+        if (!canPatchInPlace) {
+            let lastDayKey = '';
+            thread.innerHTML = messagesList.map((entry) => {
+                const dayKey = getDayKey(entry.createdAt);
+                const separator = dayKey !== lastDayKey ? buildVisitorDateSeparatorHtml(entry.createdAt) : '';
+                lastDayKey = dayKey;
+                return separator + buildVisitorMessageRowHtml(entry);
+            }).join('');
+        } else {
+            for (let index = 0; index < existingIds.length; index += 1) {
+                const entry = messagesList[index];
+                const row = existingRowsById.get(entry.id);
+                if (!row) continue;
+                const metaEl = row.querySelector('.chat-message-time');
+                const newMetaText = `${formatClock(entry.createdAt)} · ${buildVisitorSeenLabel(entry)}`;
+                if (metaEl && metaEl.textContent !== newMetaText) {
+                    metaEl.textContent = newMetaText;
+                }
+            }
+
+            const tail = messagesList.slice(existingIds.length);
+            if (tail.length) {
+                let lastDayKey = getDayKey(messagesList[existingIds.length - 1].createdAt);
+                const tailHtml = tail.map((entry) => {
+                    const dayKey = getDayKey(entry.createdAt);
+                    const separator = dayKey !== lastDayKey ? buildVisitorDateSeparatorHtml(entry.createdAt) : '';
+                    lastDayKey = dayKey;
+                    return separator + buildVisitorMessageRowHtml(entry);
+                }).join('');
+                thread.insertAdjacentHTML('beforeend', tailHtml);
+            }
+        }
 
         syncThreadScroll(thread, shouldStickToBottom, previousBottomOffset);
     };
@@ -1325,6 +1440,7 @@ function initChatWidget() {
                 <div class="chat-input-group">
                     <label><i class="fas fa-paper-plane"></i> Mensaje</label>
                     <textarea id="chat-live-message" maxlength="${MAX_MESSAGE_LENGTH}" required placeholder="Escribe tu mensaje..."></textarea>
+                    <span id="chat-char-counter" class="chat-char-counter">0/${MAX_MESSAGE_LENGTH}</span>
                 </div>
                 <button id="chat-send-btn" type="submit" class="chat-submit-btn">Enviar Mensaje</button>
             </form>
@@ -1332,6 +1448,7 @@ function initChatWidget() {
 
         const liveForm = document.getElementById('chat-live-form');
         const liveMessage = document.getElementById('chat-live-message');
+        const charCounter = document.getElementById('chat-char-counter');
         const typingIndicator = document.getElementById('chat-typing-indicator');
         if (!liveForm || !liveMessage) return;
 
@@ -1382,6 +1499,10 @@ function initChatWidget() {
 
         let typingTimer;
         liveMessage.addEventListener('input', () => {
+            if (charCounter) {
+                charCounter.textContent = `${liveMessage.value.length}/${MAX_MESSAGE_LENGTH}`;
+            }
+
             visitorTypingRef.set({
                 isTyping: liveMessage.value.trim().length > 0,
                 updatedAt: firebase.database.ServerValue.TIMESTAMP,
@@ -1396,6 +1517,18 @@ function initChatWidget() {
                     uid: visitorId
                 }).catch(() => {});
             }, 1000);
+        });
+
+        // Enter envia el mensaje; Shift+Enter inserta un salto de linea.
+        liveMessage.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                if (typeof liveForm.requestSubmit === 'function') {
+                    liveForm.requestSubmit();
+                } else {
+                    liveForm.dispatchEvent(new Event('submit', { cancelable: true }));
+                }
+            }
         });
 
         liveForm.addEventListener('submit', async (event) => {
@@ -1445,6 +1578,9 @@ function initChatWidget() {
                 }))
                 .then(() => {
                 liveMessage.value = '';
+                if (charCounter) {
+                    charCounter.textContent = `0/${MAX_MESSAGE_LENGTH}`;
+                }
                 visitorTypingRef.set({
                     isTyping: false,
                     updatedAt: firebase.database.ServerValue.TIMESTAMP,
