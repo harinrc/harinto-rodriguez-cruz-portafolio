@@ -766,8 +766,11 @@ function initChatWidget() {
     let conversationRecoveryAttempted = false;
     let hasRenderedVisitorThread = false;
     let lastRenderedVisitorConversationId = '';
-    let lastVisitorNotifiedMessageId = '';
     const VISITOR_VAPID_PUBLIC_KEY = 'REEMPLAZA_CON_TU_VAPID_KEY_PUBLICA';
+    // Recuerda por ID (no por texto/fecha) que mensajes ya avisaron con tono/
+    // notificacion, para siempre, sin importar cuantas veces se repita el
+    // mismo evento 'value' de Firebase - asi nunca puede sonar dos veces
+    // por el mismo mensaje ni acumular avisos fantasma.
     const foregroundVisitorNotifications = new Set();
 
     const getAuthUid = () => {
@@ -866,20 +869,22 @@ function initChatWidget() {
 
                 visitorMessagingRef.onMessage((payload) => {
                     const data = payload && payload.data ? payload.data : {};
-                    const notifyKey = [data.conversationId || activeConversationId || '', data.messageId || '', data.createdAt || '', data.text || ''].join('::');
-                    if (!notifyKey || notifyKey === lastVisitorNotifiedMessageId || foregroundVisitorNotifications.has(notifyKey)) return;
+                    const conversationId = data.conversationId || activeConversationId || '';
+                    const messageId = data.messageId || '';
+                    const notifyKey = `${conversationId}::${messageId}`;
+                    if (!messageId || foregroundVisitorNotifications.has(notifyKey)) return;
 
                     foregroundVisitorNotifications.add(notifyKey);
-                    lastVisitorNotifiedMessageId = notifyKey;
-                    if (foregroundVisitorNotifications.size > 80) {
+                    if (foregroundVisitorNotifications.size > 200) {
                         const oldestKey = foregroundVisitorNotifications.values().next().value;
                         foregroundVisitorNotifications.delete(oldestKey);
                     }
 
                     if (!(document.hidden || chatWindow.classList.contains('hidden'))) return;
 
-                    unreadAdminCount += 1;
-                    updateBadge();
+                    // El contador del badge lo calcula subscribeConversationMessages a
+                    // partir de los mensajes reales sin leer (nunca puede "correr" mas
+                    // alla de eso); aqui solo se reproduce el aviso sonoro/OS.
                     playNotificationTone();
 
                     // Mismo tag por conversacion (no por mensaje): si llegan varios
@@ -890,7 +895,7 @@ function initChatWidget() {
                         new Notification(data.title || 'HarinRC respondió', {
                             body: String(data.text || data.body || 'Tienes una nueva respuesta').slice(0, 140),
                             icon: 'favicon.png',
-                            tag: `chat-${data.conversationId || activeConversationId || 'visitor'}`,
+                            tag: `chat-${conversationId || 'visitor'}`,
                             renotify: false
                         });
                     }
@@ -978,13 +983,17 @@ function initChatWidget() {
         const canNotify = document.hidden || chatWindow.classList.contains('hidden');
         if (!canNotify) return;
 
-        const notifyKey = buildVisitorNotificationKey(entry);
-        if (!notifyKey || notifyKey === lastVisitorNotifiedMessageId) return;
+        const conversationId = (entry && entry.conversationId) || activeConversationId || '';
+        const messageId = (entry && entry.id) || '';
+        const notifyKey = `${conversationId}::${messageId}`;
+        if (!messageId || foregroundVisitorNotifications.has(notifyKey)) return;
 
-        lastVisitorNotifiedMessageId = notifyKey;
+        foregroundVisitorNotifications.add(notifyKey);
+        if (foregroundVisitorNotifications.size > 200) {
+            const oldestKey = foregroundVisitorNotifications.values().next().value;
+            foregroundVisitorNotifications.delete(oldestKey);
+        }
 
-        unreadAdminCount += 1;
-        updateBadge();
         playNotificationTone();
 
         if (!('Notification' in window)) return;
@@ -993,7 +1002,7 @@ function initChatWidget() {
             new Notification('HarinRC respondió', {
                 body,
                 icon: 'favicon.png',
-                tag: `chat-${(entry && entry.conversationId) || activeConversationId || 'visitor'}`,
+                tag: `chat-${conversationId || 'visitor'}`,
                 renotify: false
             });
         }
@@ -1022,11 +1031,6 @@ function initChatWidget() {
         }
 
         element.scrollTop = Math.max(0, element.scrollHeight - previousBottomOffset);
-    };
-
-    const buildVisitorNotificationKey = (entry) => {
-        if (!entry) return '';
-        return [entry.conversationId || activeConversationId || '', entry.id || '', entry.createdAt || '', entry.text || ''].join('::');
     };
 
     const clearRealtimeRefs = () => {
@@ -1429,6 +1433,15 @@ function initChatWidget() {
             hasRenderedVisitorThread = true;
 
             const adminUnread = list.filter((entry) => entry.senderType === 'admin' && !entry.seenByVisitor);
+
+            // El badge SIEMPRE refleja el conteo real de mensajes sin ver que hay
+            // en la base de datos (nunca puede "correr" mas alla de eso, sin
+            // importar cuantas veces se repita este evento 'value').
+            if (document.hidden || chatWindow.classList.contains('hidden')) {
+                unreadAdminCount = adminUnread.length;
+                updateBadge();
+            }
+
             if (adminUnread.length) {
                 const updates = {};
                 const nowIso = new Date().toISOString();
@@ -1480,7 +1493,7 @@ function initChatWidget() {
         if (lastRenderedVisitorConversationId !== conversationId) {
             lastRenderedVisitorConversationId = conversationId;
             hasRenderedVisitorThread = false;
-            lastVisitorNotifiedMessageId = '';
+            foregroundVisitorNotifications.clear();
         }
 
         chatBody.innerHTML = `
