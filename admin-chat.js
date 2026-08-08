@@ -286,13 +286,41 @@
         threadMessagesEl.querySelectorAll('[data-msg-id]').forEach((el) => {
             existingRowsById.set(el.getAttribute('data-msg-id'), el);
         });
-        const existingIds = Array.from(existingRowsById.keys());
+        let existingIds = Array.from(existingRowsById.keys());
         const newIds = messages.map((msg) => msg.id);
+
+        // Igual que en el widget del visitante: si Firebase recorto mensajes
+        // viejos (limitToLast) solo se quitan esas filas sobrantes en vez de
+        // reconstruir todo el hilo en cada mensaje nuevo.
+        let dropCount = 0;
+        if (existingIds.length && newIds.length) {
+            for (let d = 0; d <= existingIds.length; d += 1) {
+                const remainder = existingIds.slice(d);
+                if (remainder.length === 0 || remainder.every((id, index) => id === newIds[index])) {
+                    dropCount = d;
+                    break;
+                }
+            }
+        }
+        if (dropCount > 0) {
+            for (let i = 0; i < dropCount; i += 1) {
+                const staleRow = existingRowsById.get(existingIds[i]);
+                if (staleRow) staleRow.remove();
+            }
+            threadMessagesEl.querySelectorAll('.thread-date-separator').forEach((separator) => {
+                const next = separator.nextElementSibling;
+                if (!next || next.classList.contains('thread-date-separator')) {
+                    separator.remove();
+                }
+            });
+            existingIds = existingIds.slice(dropCount);
+        }
+
         const canPatchInPlace = existingIds.length > 0
             && existingIds.length <= newIds.length
             && existingIds.every((id, index) => id === newIds[index]);
 
-        let hasNewContent = !canPatchInPlace;
+        let hasNewContent = !canPatchInPlace || dropCount > 0;
 
         if (!canPatchInPlace) {
             let lastDayKey = '';
@@ -670,7 +698,7 @@
                     new Notification('Nuevo chat recibido', {
                         body: String(text).slice(0, 140),
                         icon: 'favicon.png',
-                        tag: notifyKey,
+                        tag: `chat-${conversationId || 'admin'}`,
                         renotify: false
                     });
                 }

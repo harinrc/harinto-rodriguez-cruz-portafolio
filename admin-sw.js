@@ -58,9 +58,10 @@ if (firebase.messaging.isSupported()) {
     const body = data.body || data.text || 'Tienes un nuevo mensaje en Admin Chat';
     const conversationId = data.conversationId || '';
     const targetUrl = data.url || './admin-chat.html';
-    const messageId = data.messageId || '';
-    const createdAt = data.createdAt || '';
-    const notificationTag = ['chat', conversationId, messageId, createdAt].join('-');
+    // Tag por conversacion (no por mensaje): una rafaga de mensajes seguidos
+    // reemplaza la misma notificacion en vez de apilar una nueva por cada
+    // uno, evitando que el sonido se repita sin parar.
+    const notificationTag = ['chat', conversationId || 'general'].join('-');
 
     return self.registration.showNotification(title, {
       body,

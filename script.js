@@ -882,11 +882,15 @@ function initChatWidget() {
                     updateBadge();
                     playNotificationTone();
 
+                    // Mismo tag por conversacion (no por mensaje): si llegan varios
+                    // mensajes seguidos, el sistema reemplaza la notificacion en vez
+                    // de apilar una nueva por cada uno (evita que el telefono siga
+                    // sonando notificacion tras notificacion sin parar).
                     if ('Notification' in window && Notification.permission === 'granted') {
                         new Notification(data.title || 'HarinRC respondió', {
                             body: String(data.text || data.body || 'Tienes una nueva respuesta').slice(0, 140),
                             icon: 'favicon.png',
-                            tag: notifyKey,
+                            tag: `chat-${data.conversationId || activeConversationId || 'visitor'}`,
                             renotify: false
                         });
                     }
@@ -935,8 +939,18 @@ function initChatWidget() {
         return sharedNotificationAudioCtx;
     };
 
+    // Evita que una rafaga de mensajes seguidos haga sonar el tono una y
+    // otra vez sin pausa ("el telefono sonaba sin parar"): como maximo un
+    // tono cada 2.5s, sin dejar de notificar cada mensaje por badge/OS.
+    let lastNotificationToneAt = 0;
+    const NOTIFICATION_TONE_MIN_GAP_MS = 2500;
+
     const playNotificationTone = () => {
         try {
+            const now = Date.now();
+            if (now - lastNotificationToneAt < NOTIFICATION_TONE_MIN_GAP_MS) return;
+            lastNotificationToneAt = now;
+
             const ctx = getNotificationAudioContext();
             if (!ctx) return;
             const osc = ctx.createOscillator();
@@ -949,12 +963,12 @@ function initChatWidget() {
             osc.connect(gain);
             gain.connect(ctx.destination);
 
-            const now = ctx.currentTime;
-            gain.gain.exponentialRampToValueAtTime(0.06, now + 0.01);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+            const ctxNow = ctx.currentTime;
+            gain.gain.exponentialRampToValueAtTime(0.06, ctxNow + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctxNow + 0.22);
 
-            osc.start(now);
-            osc.stop(now + 0.24);
+            osc.start(ctxNow);
+            osc.stop(ctxNow + 0.24);
         } catch (_error) {
             // Ignorar errores de audio en navegadores restringidos.
         }
@@ -979,7 +993,7 @@ function initChatWidget() {
             new Notification('HarinRC respondió', {
                 body,
                 icon: 'favicon.png',
-                tag: notifyKey,
+                tag: `chat-${(entry && entry.conversationId) || activeConversationId || 'visitor'}`,
                 renotify: false
             });
         }
@@ -1319,13 +1333,43 @@ function initChatWidget() {
         thread.querySelectorAll('[data-msg-id]').forEach((el) => {
             existingRowsById.set(el.getAttribute('data-msg-id'), el);
         });
-        const existingIds = Array.from(existingRowsById.keys());
+        let existingIds = Array.from(existingRowsById.keys());
         const newIds = messagesList.map((entry) => entry.id);
+
+        // Cuando Firebase recorta mensajes viejos (limitToLast) el prefijo ya
+        // no coincide y antes se forzaba una reconstruccion completa del hilo
+        // en CADA mensaje nuevo a partir de ahi (mas lento mientras mas larga
+        // se ponia la conversacion). Aqui solo se quitan las filas viejas que
+        // ya no estan, y el resto sigue parchandose de forma incremental.
+        let dropCount = 0;
+        if (existingIds.length && newIds.length) {
+            for (let d = 0; d <= existingIds.length; d += 1) {
+                const remainder = existingIds.slice(d);
+                if (remainder.length === 0 || remainder.every((id, index) => id === newIds[index])) {
+                    dropCount = d;
+                    break;
+                }
+            }
+        }
+        if (dropCount > 0) {
+            for (let i = 0; i < dropCount; i += 1) {
+                const staleRow = existingRowsById.get(existingIds[i]);
+                if (staleRow) staleRow.remove();
+            }
+            thread.querySelectorAll('.chat-date-separator').forEach((separator) => {
+                const next = separator.nextElementSibling;
+                if (!next || next.classList.contains('chat-date-separator')) {
+                    separator.remove();
+                }
+            });
+            existingIds = existingIds.slice(dropCount);
+        }
+
         const canPatchInPlace = existingIds.length > 0
             && existingIds.length <= newIds.length
             && existingIds.every((id, index) => id === newIds[index]);
 
-        let hasNewContent = !canPatchInPlace;
+        let hasNewContent = !canPatchInPlace || dropCount > 0;
 
         if (!canPatchInPlace) {
             let lastDayKey = '';
