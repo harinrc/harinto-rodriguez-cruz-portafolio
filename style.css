@@ -1277,6 +1277,7 @@ body.chat-open::before {
        mueva la pagina de fondo en vez de quedarse dentro del chat. */
     overscroll-behavior: contain;
     touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
 }
 
 .chat-empty {
@@ -2012,6 +2013,10 @@ body.is-scrolling .gallery-card {
 .gallery-link:active .gallery-card,
 .project-card:active,
 .skill-card:active {
+    /* Se pausa el pulso ambiental mientras se interactua: sin esto, la
+       animacion infinita seguia cambiando el box-shadow cada frame por
+       encima del brillo de hover, obligando a repintar todo el rato. */
+    animation-play-state: paused;
     border-color: rgba(248, 113, 113, 0.36);
     box-shadow:
         0 0 0 1px rgba(248, 113, 113, 0.28),
@@ -2059,6 +2064,9 @@ body.is-scrolling .gallery-link:hover .gallery-card {
 .btn:hover,
 .btn:focus-visible,
 .btn:active {
+    /* Mismo motivo que en las tarjetas: pausar el pulso ambiental evita
+       que compita con el brillo de hover en cada frame. */
+    animation-play-state: paused;
     box-shadow:
         0 0 0 1px rgba(248, 113, 113, 0.30),
         0 0 16px rgba(248, 113, 113, 0.30),

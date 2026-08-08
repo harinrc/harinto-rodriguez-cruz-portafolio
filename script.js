@@ -1325,6 +1325,8 @@ function initChatWidget() {
             && existingIds.length <= newIds.length
             && existingIds.every((id, index) => id === newIds[index]);
 
+        let hasNewContent = !canPatchInPlace;
+
         if (!canPatchInPlace) {
             let lastDayKey = '';
             thread.innerHTML = messagesList.map((entry) => {
@@ -1347,6 +1349,7 @@ function initChatWidget() {
 
             const tail = messagesList.slice(existingIds.length);
             if (tail.length) {
+                hasNewContent = true;
                 let lastDayKey = getDayKey(messagesList[existingIds.length - 1].createdAt);
                 const tailHtml = tail.map((entry) => {
                     const dayKey = getDayKey(entry.createdAt);
@@ -1358,7 +1361,12 @@ function initChatWidget() {
             }
         }
 
-        syncThreadScroll(thread, shouldStickToBottom, previousBottomOffset);
+        // Si solo se actualizo el estado "Enviado/Leido" (sin mensajes nuevos),
+        // no se toca el scroll: forzar scrollTop aqui interrumpia el scroll
+        // manual/inercial del usuario cada vez que Firebase confirmaba lectura.
+        if (hasNewContent) {
+            syncThreadScroll(thread, shouldStickToBottom, previousBottomOffset);
+        }
     };
 
     const subscribeConversationMessages = (conversationId) => {

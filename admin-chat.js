@@ -292,6 +292,8 @@
             && existingIds.length <= newIds.length
             && existingIds.every((id, index) => id === newIds[index]);
 
+        let hasNewContent = !canPatchInPlace;
+
         if (!canPatchInPlace) {
             let lastDayKey = '';
             threadMessagesEl.innerHTML = messages.map((msg) => {
@@ -315,6 +317,7 @@
 
             const tail = messages.slice(existingIds.length);
             if (tail.length) {
+                hasNewContent = true;
                 let lastDayKey = getDayKey(messages[existingIds.length - 1].createdAt);
                 const tailHtml = tail.map((msg) => {
                     const dayKey = getDayKey(msg.createdAt);
@@ -326,7 +329,12 @@
             }
         }
 
-        syncThreadScroll(threadMessagesEl, shouldStickToBottom, previousBottomOffset);
+        // Si solo se actualizo el estado "Enviado/Leido" (sin mensajes nuevos),
+        // no se toca el scroll: forzar scrollTop aqui interrumpia el scroll
+        // manual/inercial del admin cada vez que Firebase confirmaba lectura.
+        if (hasNewContent) {
+            syncThreadScroll(threadMessagesEl, shouldStickToBottom, previousBottomOffset);
+        }
     }
 
     function watchConversations() {
