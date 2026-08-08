@@ -1273,6 +1273,10 @@ body.chat-open::before {
     overflow-y: auto;
     margin-bottom: 14px;
     padding-right: 4px;
+    /* Evita que al llegar al tope/final del hilo el scroll se "encadene" y
+       mueva la pagina de fondo en vez de quedarse dentro del chat. */
+    overscroll-behavior: contain;
+    touch-action: pan-y;
 }
 
 .chat-empty {
@@ -1854,6 +1858,15 @@ body.is-scrolling .gallery-card,
 body.is-scrolling .btn,
 body.is-scrolling .section-title::before {
     animation-play-state: paused;
+}
+
+/* El backdrop-filter se recalcula en cada frame de scroll (es de los
+   efectos mas costosos del navegador); se apaga solo mientras se hace
+   scroll y vuelve de inmediato al detenerse, sin cambiar el look final. */
+body.is-scrolling .skill-card,
+body.is-scrolling .project-card,
+body.is-scrolling .gallery-card {
+    backdrop-filter: none;
 }
 
 .skill-card::after,

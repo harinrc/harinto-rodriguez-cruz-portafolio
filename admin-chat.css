@@ -249,6 +249,10 @@ body {
     min-height: 400px;
     max-height: 60vh;
     overflow-y: auto;
+    /* Evita que al llegar al tope/final del hilo el scroll se "encadene" y
+       mueva la pagina de fondo en vez de quedarse dentro del panel. */
+    overscroll-behavior: contain;
+    touch-action: pan-y;
     padding: 14px;
     display: flex;
     flex-direction: column;
