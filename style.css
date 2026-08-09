@@ -2,8 +2,8 @@
    VARIABLES GLOBALES - TEMÁTICA CRIMSON TECH (INGENIERÍA UdeM)
    ========================================================================== */
 :root {
-    --bg-color: #07111f;
-    --bg-gradient: linear-gradient(180deg, rgba(7, 17, 31, 0.92) 0%, rgba(15, 23, 42, 0.84) 45%, rgba(17, 24, 39, 0.90) 100%);
+    --bg-color: #090204;
+    --bg-gradient: linear-gradient(180deg, rgba(8, 2, 4, 0.99) 0%, rgba(11, 3, 6, 0.97) 42%, rgba(14, 4, 8, 0.99) 100%);
     --text-color: #f8fafc;
     --text-muted: #cbd5e1;
     --card-bg: rgba(15, 23, 42, 0.80);
@@ -15,9 +15,9 @@
     --grid-color: rgba(255, 255, 255, 0.04);
     --grid-accent: rgba(220, 38, 38, 0.08);
     --card-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
-    --pcb-base: #0f0204;
+    --pcb-base: #0b0103;
     --pcb-track-shadow: rgba(0, 0, 0, 0.7);
-    --pcb-track: #3d080e;
+    --pcb-track: #4a070f;
     --pcb-node: #5a5556;
     --pcb-hole: #0f0204;
     --pcb-pulse-glow: rgba(235, 10, 20, 0.15);
@@ -169,7 +169,10 @@ body::after {
     right: 0;
     bottom: -2px;
     height: 220px;
-    background: linear-gradient(180deg, rgba(7, 17, 31, 0) 0%, rgba(7, 17, 31, 0.16) 34%, rgba(15, 2, 4, 0.42) 68%, rgba(15, 2, 4, 0.96) 100%);
+    background:
+        radial-gradient(100% 145% at 0% 100%, rgba(8, 2, 4, 0.28) 0%, rgba(8, 2, 4, 0.12) 34%, rgba(8, 2, 4, 0) 74%),
+        radial-gradient(100% 145% at 100% 100%, rgba(8, 2, 4, 0.28) 0%, rgba(8, 2, 4, 0.12) 34%, rgba(8, 2, 4, 0) 74%),
+        linear-gradient(180deg, rgba(8, 2, 4, 0) 0%, rgba(8, 2, 4, 0.05) 38%, rgba(8, 2, 4, 0.18) 72%, rgba(8, 2, 4, 0.34) 100%);
     pointer-events: none;
     z-index: 0;
 }
@@ -179,6 +182,8 @@ body::after {
     inset: 0;
     z-index: 0;
     pointer-events: none;
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 54%, rgba(0, 0, 0, 0.92) 68%, rgba(0, 0, 0, 0.42) 86%, rgba(0, 0, 0, 0) 100%);
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 54%, rgba(0, 0, 0, 0.92) 68%, rgba(0, 0, 0, 0.42) 86%, rgba(0, 0, 0, 0) 100%);
 }
 
 .hero-bg-slider::before {
@@ -187,9 +192,9 @@ body::after {
     inset: 0;
     z-index: 2;
     background:
-        linear-gradient(108deg, rgba(7, 17, 31, 0.72) 0%, rgba(7, 17, 31, 0.44) 45%, rgba(7, 17, 31, 0.66) 100%),
-        radial-gradient(circle at 82% 18%, rgba(220, 38, 38, 0.28) 0%, rgba(220, 38, 38, 0) 58%),
-        radial-gradient(circle at 14% 82%, rgba(14, 165, 233, 0.08) 0%, rgba(14, 165, 233, 0) 44%);
+    linear-gradient(108deg, rgba(8, 2, 4, 0.82) 0%, rgba(12, 3, 6, 0.56) 45%, rgba(10, 2, 5, 0.76) 100%),
+    radial-gradient(circle at 82% 18%, rgba(220, 38, 38, 0.22) 0%, rgba(220, 38, 38, 0) 56%),
+    radial-gradient(circle at 14% 82%, rgba(90, 10, 18, 0.08) 0%, rgba(90, 10, 18, 0) 42%);
 }
 
 .hero-bg-slider::after {
@@ -197,12 +202,15 @@ body::after {
     position: absolute;
     inset: 0;
     z-index: 3;
-    background: linear-gradient(
-        to bottom,
-        rgba(7, 17, 31, 0) 58%,
-        rgba(7, 17, 31, 0.52) 80%,
-        rgba(15, 2, 4, 0.92) 100%
-    );
+    background:
+        radial-gradient(95% 120% at 0% 100%, rgba(8, 2, 4, 0.18) 0%, rgba(8, 2, 4, 0) 58%),
+        radial-gradient(95% 120% at 100% 100%, rgba(8, 2, 4, 0.18) 0%, rgba(8, 2, 4, 0) 58%),
+        linear-gradient(
+            to bottom,
+            rgba(8, 2, 4, 0) 56%,
+            rgba(8, 2, 4, 0.12) 80%,
+            rgba(8, 2, 4, 0.22) 100%
+        );
 }
 
 .hero-bg-slide {
@@ -1622,8 +1630,9 @@ body.chat-open::before {
 
 body {
     background:
-        radial-gradient(circle at 18% 12%, rgba(220, 38, 38, 0.12), transparent 38%),
-        radial-gradient(circle at 86% 78%, rgba(248, 113, 113, 0.10), transparent 42%),
+    radial-gradient(circle at 18% 12%, rgba(220, 38, 38, 0.10), transparent 30%),
+    radial-gradient(circle at 86% 78%, rgba(248, 113, 113, 0.05), transparent 34%),
+    radial-gradient(circle at 50% 100%, rgba(22, 3, 6, 0.30), transparent 54%),
         var(--bg-gradient);
 }
 
