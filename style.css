@@ -2115,6 +2115,33 @@ body.is-scrolling .gallery-link:hover .gallery-card {
     .gallery-card::before {
         animation-duration: 7.5s;
     }
+
+    .skill-card:hover,
+    .project-card:hover,
+    .gallery-card:hover,
+    .gallery-link:hover .gallery-card {
+        border-color: rgba(248, 113, 113, 0.20);
+        box-shadow: 0 16px 36px rgba(2, 6, 23, 0.48), 0 0 10px rgba(220, 38, 38, 0.10);
+        filter: none;
+        transform: none;
+    }
+
+    .skill-card:active,
+    .project-card:active,
+    .gallery-link:active .gallery-card {
+        transform: translateY(-1px) scale(0.998);
+        filter: drop-shadow(0 0 10px rgba(248, 113, 113, 0.18));
+    }
+
+    .skill-card:hover::before,
+    .project-card:hover::before,
+    .gallery-card:hover::before,
+    .gallery-link:hover .gallery-card::before,
+    .skill-card:active::before,
+    .project-card:active::before,
+    .gallery-link:active .gallery-card::before {
+        animation-play-state: running;
+    }
 }
 
 /* ==========================================================================
