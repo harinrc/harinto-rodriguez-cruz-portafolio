@@ -1959,10 +1959,8 @@ body::after {
 .skill-card::before,
 .project-card::before,
 .gallery-card::before {
-    /* Pulso ambiental barato: solo cambia opacidad (compositor), nunca
-       recalcula box-shadow, por eso ya no cuesta fluidez a la pagina. */
-    animation: cardNeonPulse 6s ease-in-out infinite;
-    will-change: opacity;
+    opacity: 0.42;
+    transition: opacity 0.28s ease;
 }
 
 body.is-scrolling .skill-card::before,
@@ -2090,7 +2088,7 @@ body.is-scrolling .gallery-card {
         radial-gradient(circle at 84% 82%, rgba(248, 113, 113, 0.05), transparent 40%),
         linear-gradient(150deg, rgba(12, 20, 36, 0.48) 0%, rgba(16, 24, 40, 0.58) 56%, rgba(19, 27, 44, 0.52) 100%);
     border: 1px solid rgba(248, 113, 113, 0.20);
-    backdrop-filter: blur(8px) saturate(1.05);
+    backdrop-filter: none;
 }
 
 .gallery-card {
@@ -2128,17 +2126,12 @@ body.is-scrolling .gallery-card {
 .gallery-link:active .gallery-card,
 .project-card:active,
 .skill-card:active {
-    /* Se pausa el pulso ambiental (::before) mientras se interactua: sin
-       esto seguia respirando de fondo justo cuando la tarjeta ya muestra
-       su propio brillo de hover. */
     border-color: rgba(248, 113, 113, 0.36);
     box-shadow:
-        0 0 0 1px rgba(248, 113, 113, 0.28),
-        0 0 26px rgba(248, 113, 113, 0.34),
-        0 0 68px rgba(220, 38, 38, 0.30),
-        0 20px 42px rgba(2, 6, 23, 0.55);
-    filter: drop-shadow(0 0 16px rgba(248, 113, 113, 0.24));
-    transform: translateY(-7px) scale(1.005);
+        0 0 0 1px rgba(248, 113, 113, 0.24),
+        0 16px 32px rgba(2, 6, 23, 0.52);
+    filter: none;
+    transform: translateY(-5px);
 }
 
 .skill-card:hover::before,
@@ -2152,14 +2145,14 @@ body.is-scrolling .gallery-card {
 .gallery-link:active .gallery-card::before,
 .project-card:active::before,
 .skill-card:active::before {
-    animation-play-state: paused;
+    opacity: 0.7;
 }
 
 .gallery-link:active .gallery-card,
 .project-card:active,
 .skill-card:active,
 .btn:active {
-    transform: translateY(-2px) scale(0.995);
+    transform: translateY(-1px);
 }
 
 body.is-scrolling .skill-card,
@@ -2348,7 +2341,7 @@ html[data-performance="low"] .btn::before {
         inset 0 1px 0 rgba(255, 255, 255, 0.07),
         inset 0 -18px 30px rgba(2, 6, 23, 0.18),
         0 10px 24px rgba(2, 6, 23, 0.28);
-    backdrop-filter: blur(3px) saturate(1.04);
+    backdrop-filter: none;
 }
 
 .project-gallery .project-slide {
