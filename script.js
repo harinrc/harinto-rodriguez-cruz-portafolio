@@ -23,6 +23,11 @@ const performanceProfile = (() => {
     };
 })();
 
+function isInAppBrowser() {
+    const ua = navigator.userAgent || '';
+    return /FBAN|FBAV|Instagram|Line|wv/i.test(ua);
+}
+
 function applyPerformanceMode() {
     const mode = performanceProfile.shouldReduceEffects ? 'low' : 'normal';
     document.documentElement.setAttribute('data-performance', mode);
@@ -508,6 +513,8 @@ function startProfileCarousel() {
     const profileInterval = performanceProfile.shouldReduceEffects ? 7000 : 4000;
 
     setInterval(() => {
+        if (document.hidden) return;
+
         // 1. Quita la clase 'active' de la imagen actual (empieza a desvanecerse)
         images[currentIndex].classList.remove('active');
 
@@ -517,6 +524,52 @@ function startProfileCarousel() {
         // 3. Añade la clase 'active' a la nueva imagen (aparece suavemente)
         images[currentIndex].classList.add('active');
     }, profileInterval); // Cambia la foto automáticamente
+}
+
+function initRandomProfileHaloStyles() {
+    const profileHex = document.querySelector('.profile-hex');
+    if (!profileHex) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const haloStyles = ['wave', 'nova', 'orbit', 'flare'];
+
+    const pickRandomStyle = (excludeStyle = '') => {
+        const candidates = haloStyles.filter((style) => style !== excludeStyle);
+        const source = candidates.length ? candidates : haloStyles;
+        return source[Math.floor(Math.random() * source.length)];
+    };
+
+    let currentStyle = profileHex.getAttribute('data-halo-style') || pickRandomStyle();
+    profileHex.setAttribute('data-halo-style', currentStyle);
+
+    // Los navegadores embebidos (Facebook/Instagram) son mas propensos a
+    // glitches de compositor; se fija un estilo estable para evitar parpadeo.
+    if (isInAppBrowser()) {
+        profileHex.setAttribute('data-halo-style', 'orbit');
+        return;
+    }
+
+    if (prefersReducedMotion.matches) return;
+
+    const minDelay = performanceProfile.shouldReduceEffects ? 12000 : 8500;
+    const maxDelay = performanceProfile.shouldReduceEffects ? 18000 : 14500;
+
+    const scheduleNextStyle = () => {
+        const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+
+        window.setTimeout(() => {
+            if (document.hidden) {
+                scheduleNextStyle();
+                return;
+            }
+
+            currentStyle = pickRandomStyle(currentStyle);
+            profileHex.setAttribute('data-halo-style', currentStyle);
+            scheduleNextStyle();
+        }, delay);
+    };
+
+    scheduleNextStyle();
 }
 
 // 4. Portadas dinámicas en Hero con desvanecido cada 10s
@@ -537,6 +590,8 @@ function initHeroBackgroundSlider() {
     const heroInterval = performanceProfile.shouldReduceEffects ? 14000 : 10000;
 
     window.setInterval(() => {
+        if (document.hidden) return;
+
         slides[currentIndex].classList.remove('active');
         currentIndex = (currentIndex + 1) % slides.length;
         slides[currentIndex].classList.add('active');
@@ -695,6 +750,7 @@ function startProjectImageCarousels() {
 document.addEventListener("DOMContentLoaded", () => {
     // Si ya tenías el typingEffect, puedes llamarlo aquí o mantenerlo aparte
     enforceDarkTheme();
+    initRandomProfileHaloStyles();
     initHeroBackgroundSlider();
     startProfileCarousel();
     startProjectImageCarousels();

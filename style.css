@@ -223,14 +223,16 @@ body::after {
     height: 100%;
     object-fit: cover;
     opacity: 0;
-    transform: scale(1.05);
-    filter: saturate(1.14) contrast(1.1) brightness(0.82);
-    transition: opacity 1.2s ease, transform 9.6s linear;
+    transform: translateZ(0) scale(1.04);
+    filter: saturate(1.1) contrast(1.04) brightness(0.84);
+    transition: opacity 0.8s ease, transform 8s linear;
+    will-change: opacity, transform;
+    backface-visibility: hidden;
 }
 
 .hero-bg-slide.active {
     opacity: 0.5;
-    transform: scale(1);
+    transform: translateZ(0) scale(1);
 }
 
 .hero-container {
@@ -771,9 +773,10 @@ body::after {
         animation: none !important;
     }
 
-    .hero-bg-slide {
-        transition: none;
-        transform: none;
+    .hero-bg-slide,
+    .profile-img {
+        transition: none !important;
+        transform: none !important;
     }
 
     .gallery-carousel {
@@ -931,50 +934,47 @@ body::after {
     border: 0;
     box-shadow:
         0 18px 36px rgba(2, 6, 23, 0.34),
-        0 0 0 2px rgba(248, 113, 113, 0.16),
-        0 0 22px rgba(220, 38, 38, 0.15),
-        0 0 54px rgba(220, 38, 38, 0.10);
+        0 0 0 2px rgba(248, 113, 113, 0.36),
+        0 0 30px rgba(220, 38, 38, 0.34),
+        0 0 68px rgba(220, 38, 38, 0.20);
+    --halo-pulse-min-scale: 1.005;
+    --halo-pulse-max-scale: 1.045;
+    --halo-pulse-min-opacity: 0.44;
+    --halo-pulse-max-opacity: 0.74;
+    --halo-ripple-start-scale: 0.94;
+    --halo-ripple-mid-scale: 1.04;
+    --halo-ripple-end-scale: 1.24;
+    --halo-ripple-mid-opacity: 0.42;
+    --halo-before-opacity: 0.68;
+    --halo-before-duration: 5.2s;
+    --halo-after-duration: 5.1s;
+    --halo-after-delay: 0.9s;
     overflow: visible;
     isolation: isolate;
 }
 
 @keyframes profileHaloPulse {
     0%, 100% {
-        transform: scale(0.97);
-        opacity: 0.30;
+        transform: scale(var(--halo-pulse-min-scale));
+        opacity: var(--halo-pulse-min-opacity);
     }
-    18% {
-        transform: scale(1.01);
-        opacity: 0.88;
-    }
-    38% {
-        transform: scale(1.035);
-        opacity: 0.52;
-    }
-    60% {
-        transform: scale(1.055);
-        opacity: 0.78;
+    50% {
+        transform: scale(var(--halo-pulse-max-scale));
+        opacity: var(--halo-pulse-max-opacity);
     }
 }
 
 @keyframes profileHaloRipple {
     0% {
-        transform: scale(0.88);
+        transform: scale(var(--halo-ripple-start-scale));
         opacity: 0;
     }
-    12% {
-        opacity: 0.20;
-    }
-    28% {
-        transform: scale(1.08);
-        opacity: 0.28;
-    }
-    52% {
-        transform: scale(1.2);
-        opacity: 0.18;
+    24% {
+        transform: scale(var(--halo-ripple-mid-scale));
+        opacity: var(--halo-ripple-mid-opacity);
     }
     100% {
-        transform: scale(1.42);
+        transform: scale(var(--halo-ripple-end-scale));
         opacity: 0;
     }
 }
@@ -984,28 +984,113 @@ body::after {
     position: absolute;
     inset: -8px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(220, 38, 38, 0) 63%, rgba(220, 38, 38, 0.34) 75%, rgba(248, 113, 113, 0.58) 82%, rgba(220, 38, 38, 0.14) 90%, rgba(220, 38, 38, 0) 100%);
-    filter: blur(7px);
-    opacity: 0.72;
+    background: radial-gradient(circle, rgba(220, 38, 38, 0) 60%, rgba(220, 38, 38, 0.54) 72%, rgba(248, 113, 113, 0.55) 80%, rgba(220, 38, 38, 0.26) 90%, rgba(220, 38, 38, 0) 100%);
+    filter: blur(8px);
+    opacity: var(--halo-before-opacity);
     z-index: 1;
     pointer-events: none;
-    animation: profileHaloPulse 5.2s cubic-bezier(0.22, 0.82, 0.25, 1) infinite;
+    animation: profileHaloPulse var(--halo-before-duration) ease-in-out infinite;
     will-change: transform, opacity;
 }
 
 .profile-hex::after {
     content: "";
     position: absolute;
-    inset: -42px;
+    inset: -38px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(220, 38, 38, 0) 54%, rgba(248, 113, 113, 0.12) 62%, rgba(220, 38, 38, 0.36) 70%, rgba(248, 113, 113, 0.18) 77%, rgba(220, 38, 38, 0) 86%);
-    filter: blur(18px);
+    background: radial-gradient(circle, rgba(220, 38, 38, 0) 52%, rgba(248, 113, 113, 0.26) 63%, rgba(220, 38, 38, 0.48) 71%, rgba(248, 113, 113, 0.22) 78%, rgba(220, 38, 38, 0) 86%);
+    filter: blur(8px);
     opacity: 0;
     z-index: 0;
     pointer-events: none;
-    animation: profileHaloRipple 5.2s ease-out infinite;
-    animation-delay: 1.1s;
+    animation: profileHaloRipple var(--halo-after-duration) cubic-bezier(0.2, 0.6, 0.2, 1) infinite;
+    animation-delay: var(--halo-after-delay);
     will-change: transform, opacity;
+}
+
+.profile-hex[data-halo-style="wave"] {
+    --halo-pulse-min-scale: 1.005;
+    --halo-pulse-max-scale: 1.045;
+    --halo-pulse-min-opacity: 0.44;
+    --halo-pulse-max-opacity: 0.74;
+    --halo-ripple-start-scale: 0.94;
+    --halo-ripple-mid-scale: 1.04;
+    --halo-ripple-end-scale: 1.24;
+    --halo-ripple-mid-opacity: 0.42;
+    --halo-before-opacity: 0.68;
+    --halo-before-duration: 5.2s;
+    --halo-after-duration: 5.1s;
+    --halo-after-delay: 0.9s;
+}
+
+.profile-hex[data-halo-style="nova"] {
+    --halo-pulse-min-scale: 1.0;
+    --halo-pulse-max-scale: 1.035;
+    --halo-pulse-min-opacity: 0.36;
+    --halo-pulse-max-opacity: 0.62;
+    --halo-ripple-start-scale: 0.96;
+    --halo-ripple-mid-scale: 1.03;
+    --halo-ripple-end-scale: 1.2;
+    --halo-ripple-mid-opacity: 0.34;
+    --halo-before-opacity: 0.58;
+    --halo-before-duration: 4.8s;
+    --halo-after-duration: 4.7s;
+    --halo-after-delay: 0.7s;
+}
+
+.profile-hex[data-halo-style="nova"]::before {
+    background: radial-gradient(circle, rgba(220, 38, 38, 0) 58%, rgba(255, 79, 110, 0.58) 71%, rgba(255, 148, 148, 0.56) 80%, rgba(220, 38, 38, 0.24) 90%, rgba(220, 38, 38, 0) 100%);
+}
+
+.profile-hex[data-halo-style="nova"]::after {
+    background: radial-gradient(circle, rgba(220, 38, 38, 0) 50%, rgba(255, 152, 170, 0.24) 62%, rgba(255, 64, 97, 0.42) 70%, rgba(255, 152, 170, 0.2) 78%, rgba(220, 38, 38, 0) 86%);
+}
+
+.profile-hex[data-halo-style="orbit"] {
+    --halo-pulse-min-scale: 1.0;
+    --halo-pulse-max-scale: 1.028;
+    --halo-pulse-min-opacity: 0.28;
+    --halo-pulse-max-opacity: 0.52;
+    --halo-ripple-start-scale: 0.98;
+    --halo-ripple-mid-scale: 1.02;
+    --halo-ripple-end-scale: 1.16;
+    --halo-ripple-mid-opacity: 0.26;
+    --halo-before-opacity: 0.48;
+    --halo-before-duration: 6.8s;
+    --halo-after-duration: 6.2s;
+    --halo-after-delay: 1.2s;
+}
+
+.profile-hex[data-halo-style="orbit"]::before {
+    background: radial-gradient(circle, rgba(220, 38, 38, 0) 64%, rgba(248, 113, 113, 0.24) 74%, rgba(248, 113, 113, 0.32) 82%, rgba(220, 38, 38, 0.12) 90%, rgba(220, 38, 38, 0) 100%);
+}
+
+.profile-hex[data-halo-style="orbit"]::after {
+    background: radial-gradient(circle, rgba(220, 38, 38, 0) 58%, rgba(248, 113, 113, 0.1) 66%, rgba(220, 38, 38, 0.2) 73%, rgba(248, 113, 113, 0.08) 80%, rgba(220, 38, 38, 0) 86%);
+    filter: blur(10px);
+}
+
+.profile-hex[data-halo-style="flare"] {
+    --halo-pulse-min-scale: 1.008;
+    --halo-pulse-max-scale: 1.05;
+    --halo-pulse-min-opacity: 0.46;
+    --halo-pulse-max-opacity: 0.8;
+    --halo-ripple-start-scale: 0.93;
+    --halo-ripple-mid-scale: 1.05;
+    --halo-ripple-end-scale: 1.27;
+    --halo-ripple-mid-opacity: 0.46;
+    --halo-before-opacity: 0.72;
+    --halo-before-duration: 4.6s;
+    --halo-after-duration: 4.4s;
+    --halo-after-delay: 0.6s;
+}
+
+.profile-hex[data-halo-style="flare"]::before {
+    background: radial-gradient(circle, rgba(220, 38, 38, 0) 58%, rgba(248, 113, 113, 0.62) 70%, rgba(255, 173, 173, 0.5) 79%, rgba(220, 38, 38, 0.28) 89%, rgba(220, 38, 38, 0) 100%);
+}
+
+.profile-hex[data-halo-style="flare"]::after {
+    background: radial-gradient(circle, rgba(220, 38, 38, 0) 50%, rgba(248, 113, 113, 0.28) 63%, rgba(220, 38, 38, 0.46) 71%, rgba(248, 113, 113, 0.24) 78%, rgba(220, 38, 38, 0) 86%);
 }
 
 .profile-hex:hover::before,
@@ -1023,14 +1108,16 @@ body::after {
     inset: 0;
     width: auto;
     height: auto;
-    object-fit: cover; /* Centra y recorta la foto automáticamente sin deformarla */
+    object-fit: cover;
     border-radius: 50%;
     opacity: 0;
-    transition: opacity 1s ease-in-out;
+    transition: opacity 0.7s ease;
+    will-change: opacity;
+    backface-visibility: hidden;
+    transform: translateZ(0);
     z-index: 2;
 }
 
-/* Mantiene la foto activa arriba y visible */
 .profile-img.active {
     opacity: 1;
     z-index: 2;
@@ -1750,12 +1837,11 @@ body::after {
 .gallery-card {
     background: linear-gradient(145deg, var(--glass-strong), rgba(18, 25, 42, 0.92));
     border: 1px solid rgba(248, 113, 113, 0.13);
-    backdrop-filter: blur(8px);
-    /* Brillo base fijo (no animado): la "pulsacion" ahora la da solo el
-       anillo del borde (::before) cambiando de opacidad, mucho mas barato
-       que animar box-shadow en cada frame sobre toda la tarjeta. */
-    box-shadow: 0 16px 36px rgba(2, 6, 23, 0.48), 0 0 10px rgba(220, 38, 38, 0.10);
+    backdrop-filter: none;
+    box-shadow: 0 14px 28px rgba(2, 6, 23, 0.42), 0 0 8px rgba(220, 38, 38, 0.08);
     position: relative;
+    transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+    will-change: transform;
 }
 
 .skill-card::before,
@@ -1772,12 +1858,34 @@ body::after {
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     pointer-events: none;
+    opacity: 0.42;
+    transition: opacity 0.24s ease;
 }
 
 .skill-card:hover,
 .project-card:hover,
-.gallery-card:hover {
-    box-shadow: 0 18px 42px rgba(220, 38, 38, 0.16), 0 14px 36px rgba(2, 6, 23, 0.50);
+.gallery-card:hover,
+.gallery-link:hover .gallery-card {
+    transform: translateY(-4px);
+    border-color: rgba(248, 113, 113, 0.24);
+    box-shadow: 0 12px 24px rgba(2, 6, 23, 0.48), 0 0 10px rgba(220, 38, 38, 0.14);
+}
+
+.skill-card:active,
+.project-card:active,
+.gallery-link:active .gallery-card {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(2, 6, 23, 0.42), 0 0 6px rgba(220, 38, 38, 0.10);
+}
+
+.skill-card:hover::before,
+.project-card:hover::before,
+.gallery-card:hover::before,
+.gallery-link:hover .gallery-card::before,
+.skill-card:active::before,
+.project-card:active::before,
+.gallery-link:active .gallery-card::before {
+    opacity: 0.62;
 }
 
 .project-img,
