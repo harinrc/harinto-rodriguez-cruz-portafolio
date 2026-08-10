@@ -2169,6 +2169,11 @@ body.is-scrolling .gallery-link:hover .gallery-card {
     filter: none;
 }
 
+body.is-scrolling .navbar,
+body.is-scrolling .chat-window {
+    backdrop-filter: none;
+}
+
 .js-typewriter {
     display: inline-block;
     min-height: 1em;
@@ -2230,7 +2235,10 @@ body.is-scrolling .gallery-link:hover .gallery-card {
     .project-card:active,
     .gallery-link:active .gallery-card {
         transform: translateY(-1px) scale(0.998);
-        filter: drop-shadow(0 0 10px rgba(248, 113, 113, 0.18));
+        filter: none;
+        box-shadow:
+            0 0 0 1px rgba(248, 113, 113, 0.22),
+            0 10px 24px rgba(2, 6, 23, 0.44);
     }
 
     .skill-card:hover::before,
@@ -2240,7 +2248,7 @@ body.is-scrolling .gallery-link:hover .gallery-card {
     .skill-card:active::before,
     .project-card:active::before,
     .gallery-link:active .gallery-card::before {
-        animation-play-state: running;
+        animation-play-state: paused;
     }
 }
 

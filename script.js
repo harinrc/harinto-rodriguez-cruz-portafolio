@@ -30,19 +30,44 @@ function applyPerformanceMode() {
 
 function initScrollPerformanceMode() {
     const scrollingClass = 'is-scrolling';
+    const SCROLL_IDLE_MS = 140;
     let scrollIdleTimer;
+    let isScrollModeActive = false;
+    let rafScheduled = false;
 
-    const enableScrollMode = () => {
-        document.body.classList.add(scrollingClass);
+    const disableScrollModeLater = () => {
         window.clearTimeout(scrollIdleTimer);
         scrollIdleTimer = window.setTimeout(() => {
             document.body.classList.remove(scrollingClass);
-        }, 140);
+            isScrollModeActive = false;
+        }, SCROLL_IDLE_MS);
     };
 
-    window.addEventListener('scroll', enableScrollMode, { passive: true });
-    window.addEventListener('wheel', enableScrollMode, { passive: true });
-    window.addEventListener('touchmove', enableScrollMode, { passive: true });
+    const enableScrollMode = () => {
+        if (!isScrollModeActive) {
+            document.body.classList.add(scrollingClass);
+            isScrollModeActive = true;
+        }
+
+        disableScrollModeLater();
+    };
+
+    const onScrollActivity = () => {
+        if (rafScheduled) {
+            disableScrollModeLater();
+            return;
+        }
+
+        rafScheduled = true;
+        window.requestAnimationFrame(() => {
+            rafScheduled = false;
+            enableScrollMode();
+        });
+    };
+
+    window.addEventListener('scroll', onScrollActivity, { passive: true });
+    window.addEventListener('wheel', onScrollActivity, { passive: true });
+    window.addEventListener('touchmove', onScrollActivity, { passive: true });
 }
 
 function initPcbBackground() {
