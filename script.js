@@ -29,8 +29,12 @@ function isInAppBrowser() {
 }
 
 function applyPerformanceMode() {
-    const mode = performanceProfile.shouldReduceEffects ? 'low' : 'normal';
+    const isApp = isInAppBrowser();
+    const mode = (performanceProfile.shouldReduceEffects || isApp) ? 'low' : 'normal';
     document.documentElement.setAttribute('data-performance', mode);
+    if (isApp) {
+        document.documentElement.classList.add('is-in-app-browser');
+    }
 }
 
 function initScrollPerformanceMode() {

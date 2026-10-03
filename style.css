@@ -89,8 +89,7 @@ body::after {
 .skills-section,
 .projects-section,
 .main-footer {
-    content-visibility: auto;
-    contain-intrinsic-size: 760px;
+    content-visibility: visible;
 }
 
 /* ==========================================================================
@@ -217,16 +216,16 @@ body::after {
     height: 100%;
     object-fit: cover;
     opacity: 0;
-    transform: translateZ(0) scale(1.04);
+    transform: translate3d(0, 0, 0);
     filter: saturate(1.10) contrast(1.04) brightness(0.82);
-    transition: opacity 0.8s ease, transform 8s linear;
-    will-change: opacity, transform;
+    transition: opacity 0.8s ease;
+    will-change: opacity;
     backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 .hero-bg-slide.active {
     opacity: 0.36;
-    transform: translateZ(0) scale(1);
 }
 
 .hero-container {
