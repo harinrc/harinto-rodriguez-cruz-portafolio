@@ -90,8 +90,9 @@ function initPcbBackground() {
     // menos glow) para evitar el sobrecalentamiento reportado, sin tocar
     // el resto de animaciones/estilos del sitio.
     const canvasShouldReduceEffects = performanceProfile.shouldReduceEffects || performanceProfile.isTouchDevice;
-    const totalTracks = canvasShouldReduceEffects ? 22 : 45;
-    const pulseSpawnThreshold = canvasShouldReduceEffects ? 0.65 : 0.2;
+    const isDesktop = !canvasShouldReduceEffects && window.innerWidth >= 768;
+    const totalTracks = isDesktop ? 65 : (canvasShouldReduceEffects ? 24 : 45);
+    const pulseSpawnThreshold = canvasShouldReduceEffects ? 0.65 : 0.15;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let lastFrameTime = 0;
     let resizeTimer;
@@ -151,26 +152,31 @@ function initPcbBackground() {
 
             tracks.push(points);
 
-            if (Math.random() > pulseSpawnThreshold) {
+            // Generar más pulsos luminosos por pista para mayor dinamismo
+            const pulsesCount = isDesktop ? (Math.random() > 0.35 ? 2 : 1) : (Math.random() > pulseSpawnThreshold ? 1 : 0);
+            for (let p = 0; p < pulsesCount; p++) {
                 pulses.push({
                     trackIndex,
-                    segment: 0,
-                    progress: 0,
-                    speed: Math.random() * 0.003 + 0.002,
-                    size: Math.random() * 2 + 1.5
+                    segment: Math.floor(Math.random() * Math.max(1, segments - 1)),
+                    progress: Math.random(),
+                    speed: Math.random() * 0.0035 + 0.002,
+                    size: Math.random() * (isDesktop ? 2.5 : 2) + 1.8
                 });
             }
         }
     }
 
     const drawTrack = (track, colors) => {
+        const trackLineWidth = isDesktop ? 3.6 : 3;
+        const shadowLineWidth = isDesktop ? 4.6 : 3.5;
+
         ctx.beginPath();
         ctx.moveTo(track[0].x + 2, track[0].y + 2);
         for (let pointIndex = 1; pointIndex < track.length; pointIndex++) {
             ctx.lineTo(track[pointIndex].x + 2, track[pointIndex].y + 2);
         }
         ctx.strokeStyle = colors.trackShadow;
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = shadowLineWidth;
         ctx.stroke();
 
         ctx.beginPath();
@@ -179,27 +185,33 @@ function initPcbBackground() {
             ctx.lineTo(track[pointIndex].x, track[pointIndex].y);
         }
         ctx.strokeStyle = colors.track;
-        ctx.lineWidth = 3;
+        ctx.lineWidth = trackLineWidth;
         ctx.stroke();
 
-        const start = track[0];
-        const end = track[track.length - 1];
+        // Nodos luminosos en extremos y esquinas de las pistas
+        track.forEach((position, idx) => {
+            const isTerminal = (idx === 0 || idx === track.length - 1);
+            const isCorner = idx % 2 === 0;
 
-        [start, end].forEach((position) => {
-            ctx.beginPath();
-            ctx.arc(position.x + 1, position.y + 1, 4.5, 0, Math.PI * 2);
-            ctx.fillStyle = colors.trackShadow;
-            ctx.fill();
+            if (isTerminal || isCorner) {
+                // Halo de brillo exterior en el nodo
+                ctx.beginPath();
+                ctx.arc(position.x, position.y, isTerminal ? (isDesktop ? 6.5 : 5) : 4.2, 0, Math.PI * 2);
+                ctx.fillStyle = colors.pulseGlow;
+                ctx.fill();
 
-            ctx.beginPath();
-            ctx.arc(position.x, position.y, 4, 0, Math.PI * 2);
-            ctx.fillStyle = colors.node;
-            ctx.fill();
+                // Anillo del nodo
+                ctx.beginPath();
+                ctx.arc(position.x, position.y, isTerminal ? (isDesktop ? 4.6 : 4) : 3.2, 0, Math.PI * 2);
+                ctx.fillStyle = colors.node;
+                ctx.fill();
 
-            ctx.beginPath();
-            ctx.arc(position.x, position.y, 1.5, 0, Math.PI * 2);
-            ctx.fillStyle = colors.hole;
-            ctx.fill();
+                // Punto central brillante
+                ctx.beginPath();
+                ctx.arc(position.x, position.y, isTerminal ? 1.8 : 1.2, 0, Math.PI * 2);
+                ctx.fillStyle = isTerminal ? colors.pulseCore : colors.hole;
+                ctx.fill();
+            }
         });
     };
 
@@ -212,20 +224,21 @@ function initPcbBackground() {
         const x = pointA.x + (pointB.x - pointA.x) * pulse.progress;
         const y = pointA.y + (pointB.y - pointA.y) * pulse.progress;
 
+        const glowRadius = isDesktop ? pulse.size + 8 : pulse.size + 5;
         ctx.beginPath();
-        ctx.arc(x, y, pulse.size + 6, 0, Math.PI * 2);
+        ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
         ctx.fillStyle = colors.pulseGlow;
         ctx.fill();
 
         ctx.beginPath();
-        ctx.arc(x, y, pulse.size + 2, 0, Math.PI * 2);
+        ctx.arc(x, y, pulse.size + 2.5, 0, Math.PI * 2);
         ctx.fillStyle = colors.pulseCore;
         ctx.fill();
 
         ctx.beginPath();
         ctx.arc(x, y, pulse.size, 0, Math.PI * 2);
         ctx.fillStyle = colors.pulseHot;
-        ctx.shadowBlur = canvasShouldReduceEffects ? 6 : 12;
+        ctx.shadowBlur = canvasShouldReduceEffects ? 6 : (isDesktop ? 16 : 10);
         ctx.shadowColor = colors.pulseCore;
         ctx.fill();
         ctx.shadowBlur = 0;

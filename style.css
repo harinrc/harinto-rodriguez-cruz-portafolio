@@ -17,10 +17,10 @@
     --card-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
     --pcb-base: #01060d;
     --pcb-track-shadow: rgba(0, 0, 0, 0.7);
-    --pcb-track: #7a0f22;
-    --pcb-node: #a23b52;
+    --pcb-track: #8e142c;
+    --pcb-node: #c23b5a;
     --pcb-hole: #01040a;
-    --pcb-pulse-glow: rgba(255, 44, 71, 0.2);
+    --pcb-pulse-glow: rgba(255, 44, 71, 0.36);
     --pcb-pulse-core: #ff2c47;
     --pcb-pulse-hot: #ffffff;
     --pcb-vignette:
