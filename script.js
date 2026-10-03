@@ -196,19 +196,19 @@ function initPcbBackground() {
             if (isTerminal || isCorner) {
                 // Halo de brillo exterior en el nodo
                 ctx.beginPath();
-                ctx.arc(position.x, position.y, isTerminal ? (isDesktop ? 6.5 : 5) : 4.2, 0, Math.PI * 2);
+                ctx.arc(position.x, position.y, isTerminal ? (isDesktop ? 7.5 : 5.8) : 4.8, 0, Math.PI * 2);
                 ctx.fillStyle = colors.pulseGlow;
                 ctx.fill();
 
                 // Anillo del nodo
                 ctx.beginPath();
-                ctx.arc(position.x, position.y, isTerminal ? (isDesktop ? 4.6 : 4) : 3.2, 0, Math.PI * 2);
+                ctx.arc(position.x, position.y, isTerminal ? (isDesktop ? 5.0 : 4.2) : 3.4, 0, Math.PI * 2);
                 ctx.fillStyle = colors.node;
                 ctx.fill();
 
                 // Punto central brillante
                 ctx.beginPath();
-                ctx.arc(position.x, position.y, isTerminal ? 1.8 : 1.2, 0, Math.PI * 2);
+                ctx.arc(position.x, position.y, isTerminal ? 2.2 : 1.4, 0, Math.PI * 2);
                 ctx.fillStyle = isTerminal ? colors.pulseCore : colors.hole;
                 ctx.fill();
             }
@@ -224,21 +224,21 @@ function initPcbBackground() {
         const x = pointA.x + (pointB.x - pointA.x) * pulse.progress;
         const y = pointA.y + (pointB.y - pointA.y) * pulse.progress;
 
-        const glowRadius = isDesktop ? pulse.size + 8 : pulse.size + 5;
+        const glowRadius = isDesktop ? pulse.size + 10 : pulse.size + 6.5;
         ctx.beginPath();
         ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
         ctx.fillStyle = colors.pulseGlow;
         ctx.fill();
 
         ctx.beginPath();
-        ctx.arc(x, y, pulse.size + 2.5, 0, Math.PI * 2);
+        ctx.arc(x, y, pulse.size + 2.8, 0, Math.PI * 2);
         ctx.fillStyle = colors.pulseCore;
         ctx.fill();
 
         ctx.beginPath();
         ctx.arc(x, y, pulse.size, 0, Math.PI * 2);
         ctx.fillStyle = colors.pulseHot;
-        ctx.shadowBlur = canvasShouldReduceEffects ? 6 : (isDesktop ? 16 : 10);
+        ctx.shadowBlur = canvasShouldReduceEffects ? 8 : (isDesktop ? 22 : 14);
         ctx.shadowColor = colors.pulseCore;
         ctx.fill();
         ctx.shadowBlur = 0;
