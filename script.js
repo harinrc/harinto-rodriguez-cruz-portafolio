@@ -245,8 +245,7 @@ function initPcbBackground() {
         if (!cachedColors) refreshCachedColors();
         const colors = cachedColors;
 
-        ctx.fillStyle = colors.base;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         tracks.forEach((track) => drawTrack(track, colors));
 

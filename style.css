@@ -181,12 +181,13 @@ body::after {
 }
 
 .hero-bg-slider {
-    position: absolute;
+    position: fixed;
     inset: 0;
+    width: 100vw;
+    height: 100vh;
     z-index: 0;
     pointer-events: none;
-    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 54%, rgba(0, 0, 0, 0.92) 68%, rgba(0, 0, 0, 0.42) 86%, rgba(0, 0, 0, 0) 100%);
-    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 1) 54%, rgba(0, 0, 0, 0.92) 68%, rgba(0, 0, 0, 0.42) 86%, rgba(0, 0, 0, 0) 100%);
+    overflow: hidden;
 }
 
 .hero-bg-slider::before {
@@ -195,9 +196,9 @@ body::after {
     inset: 0;
     z-index: 2;
     background:
-    linear-gradient(108deg, rgba(2, 6, 12, 0.7) 0%, rgba(4, 10, 18, 0.46) 45%, rgba(3, 5, 10, 0.66) 100%),
-    radial-gradient(circle at 82% 18%, rgba(255, 44, 71, 0.3) 0%, rgba(255, 44, 71, 0) 56%),
-    radial-gradient(circle at 14% 82%, rgba(0, 216, 255, 0.18) 0%, rgba(0, 216, 255, 0) 42%);
+        linear-gradient(108deg, rgba(2, 6, 12, 0.72) 0%, rgba(4, 10, 18, 0.52) 45%, rgba(3, 5, 10, 0.70) 100%),
+        radial-gradient(circle at 82% 18%, rgba(255, 44, 71, 0.24) 0%, rgba(255, 44, 71, 0) 56%),
+        radial-gradient(circle at 14% 82%, rgba(0, 216, 255, 0.14) 0%, rgba(0, 216, 255, 0) 42%);
 }
 
 .hero-bg-slider::after {
@@ -206,13 +207,12 @@ body::after {
     inset: 0;
     z-index: 3;
     background:
-        radial-gradient(95% 120% at 0% 100%, rgba(2, 5, 11, 0.2) 0%, rgba(2, 5, 11, 0) 58%),
-        radial-gradient(95% 120% at 100% 100%, rgba(2, 5, 11, 0.2) 0%, rgba(2, 5, 11, 0) 58%),
+        radial-gradient(95% 120% at 0% 100%, rgba(2, 5, 11, 0.35) 0%, rgba(2, 5, 11, 0) 58%),
+        radial-gradient(95% 120% at 100% 100%, rgba(2, 5, 11, 0.35) 0%, rgba(2, 5, 11, 0) 58%),
         linear-gradient(
             to bottom,
-            rgba(2, 5, 11, 0) 56%,
-            rgba(2, 5, 11, 0.1) 80%,
-            rgba(2, 5, 11, 0.18) 100%
+            rgba(2, 5, 11, 0.25) 0%,
+            rgba(2, 5, 11, 0.45) 100%
         );
 }
 
@@ -224,14 +224,14 @@ body::after {
     object-fit: cover;
     opacity: 0;
     transform: translateZ(0) scale(1.04);
-    filter: saturate(1.1) contrast(1.04) brightness(0.84);
+    filter: saturate(1.1) contrast(1.04) brightness(0.85);
     transition: opacity 0.8s ease, transform 8s linear;
     will-change: opacity, transform;
     backface-visibility: hidden;
 }
 
 .hero-bg-slide.active {
-    opacity: 0.5;
+    opacity: 0.45;
     transform: translateZ(0) scale(1);
 }
 
