@@ -15,18 +15,18 @@
     --grid-color: rgba(255, 255, 255, 0.04);
     --grid-accent: rgba(220, 38, 38, 0.08);
     --card-shadow: 0 18px 40px rgba(2, 6, 23, 0.45);
-    --pcb-base: #01060d;
-    --pcb-track-shadow: rgba(0, 0, 0, 0.7);
-    --pcb-track: #a31634;
-    --pcb-node: #d53d64;
+    --pcb-base: #020812;
+    --pcb-track-shadow: rgba(0, 0, 0, 0.6);
+    --pcb-track: #ba193d;
+    --pcb-node: #e6456f;
     --pcb-hole: #01040a;
-    --pcb-pulse-glow: rgba(255, 48, 82, 0.46);
-    --pcb-pulse-core: #ff2346;
+    --pcb-pulse-glow: rgba(255, 55, 92, 0.52);
+    --pcb-pulse-core: #ff2548;
     --pcb-pulse-hot: #ffffff;
     --pcb-vignette:
-        linear-gradient(90deg, rgba(0, 0, 0, 0.66) 0%, rgba(0, 0, 0, 0.16) 24%, rgba(0, 0, 0, 0) 38%),
-        linear-gradient(270deg, rgba(0, 0, 0, 0.66) 0%, rgba(0, 0, 0, 0.16) 24%, rgba(0, 0, 0, 0) 38%),
-        radial-gradient(circle, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, 0.86) 100%);
+        linear-gradient(90deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.08) 24%, rgba(0, 0, 0, 0) 38%),
+        linear-gradient(270deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.08) 24%, rgba(0, 0, 0, 0) 38%),
+        radial-gradient(circle, rgba(0, 0, 0, 0) 45%, rgba(0, 0, 0, 0.62) 100%);
 }
 
 /* ==========================================================================
@@ -192,9 +192,7 @@ body::after {
     position: absolute;
     inset: 0;
     z-index: 2;
-    background:
-        radial-gradient(ellipse at 50% 45%, rgba(2, 6, 12, 0.42) 0%, rgba(2, 6, 12, 0.76) 80%),
-        linear-gradient(165deg, rgba(2, 6, 12, 0.65) 0%, rgba(4, 8, 16, 0.48) 50%, rgba(2, 5, 10, 0.74) 100%);
+    background: linear-gradient(165deg, rgba(2, 6, 12, 0.38) 0%, rgba(4, 8, 16, 0.22) 50%, rgba(2, 5, 10, 0.42) 100%);
 }
 
 .hero-bg-slider::after {
@@ -203,12 +201,12 @@ body::after {
     inset: 0;
     z-index: 3;
     background:
-        radial-gradient(ellipse at center, rgba(0, 0, 0, 0.08) 0%, rgba(1, 4, 10, 0.62) 100%),
+        radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 45%, rgba(1, 4, 10, 0.48) 100%),
         linear-gradient(
             to bottom,
-            rgba(2, 5, 11, 0.12) 0%,
-            rgba(2, 5, 11, 0.08) 40%,
-            rgba(2, 5, 11, 0.45) 100%
+            rgba(2, 5, 11, 0.06) 0%,
+            transparent 40%,
+            rgba(2, 5, 11, 0.35) 100%
         );
 }
 
@@ -220,14 +218,14 @@ body::after {
     object-fit: cover;
     opacity: 0;
     transform: translateZ(0) scale(1.04);
-    filter: saturate(1.18) contrast(1.08) brightness(0.88);
+    filter: saturate(1.16) contrast(1.05) brightness(0.96);
     transition: opacity 0.8s ease, transform 8s linear;
     will-change: opacity, transform;
     backface-visibility: hidden;
 }
 
 .hero-bg-slide.active {
-    opacity: 0.44;
+    opacity: 0.58;
     transform: translateZ(0) scale(1);
 }
 
