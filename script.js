@@ -95,7 +95,7 @@ function initPcbBackground() {
     // el resto de animaciones/estilos del sitio.
     const canvasShouldReduceEffects = performanceProfile.shouldReduceEffects || performanceProfile.isTouchDevice;
     const isDesktop = !canvasShouldReduceEffects && window.innerWidth >= 768;
-    const totalTracks = isDesktop ? 65 : (canvasShouldReduceEffects ? 24 : 45);
+    const totalTracks = isDesktop ? 38 : (canvasShouldReduceEffects ? 24 : 45);
     const pulseSpawnThreshold = canvasShouldReduceEffects ? 0.65 : 0.15;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let lastFrameTime = 0;
@@ -156,8 +156,8 @@ function initPcbBackground() {
 
             tracks.push(points);
 
-            // Generar más pulsos luminosos por pista para mayor dinamismo
-            const pulsesCount = isDesktop ? (Math.random() > 0.35 ? 2 : 1) : (Math.random() > pulseSpawnThreshold ? 1 : 0);
+            const desktopPulseThreshold = isDesktop ? 0.72 : pulseSpawnThreshold;
+            const pulsesCount = Math.random() > desktopPulseThreshold ? 1 : 0;
             for (let p = 0; p < pulsesCount; p++) {
                 pulses.push({
                     trackIndex,
