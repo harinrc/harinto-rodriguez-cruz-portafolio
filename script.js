@@ -763,6 +763,205 @@ function startProjectImageCarousels() {
     });
 }
 
+function initImageLightbox() {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'image-lightbox';
+    dialog.setAttribute('aria-labelledby', 'image-lightbox-title');
+
+    const header = document.createElement('div');
+    header.className = 'image-lightbox-header';
+
+    const title = document.createElement('h2');
+    title.id = 'image-lightbox-title';
+
+    const count = document.createElement('span');
+    count.className = 'image-lightbox-count';
+    count.setAttribute('aria-live', 'polite');
+
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'image-lightbox-close';
+    closeButton.setAttribute('aria-label', 'Cerrar galería');
+    closeButton.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i>';
+
+    const stage = document.createElement('div');
+    stage.className = 'image-lightbox-stage';
+
+    const image = document.createElement('img');
+    image.className = 'image-lightbox-image';
+    image.alt = '';
+
+    const previousButton = document.createElement('button');
+    previousButton.type = 'button';
+    previousButton.className = 'image-lightbox-nav image-lightbox-previous';
+    previousButton.setAttribute('aria-label', 'Ver imagen anterior');
+    previousButton.innerHTML = '<i class="fas fa-chevron-left" aria-hidden="true"></i>';
+
+    const nextButton = document.createElement('button');
+    nextButton.type = 'button';
+    nextButton.className = 'image-lightbox-nav image-lightbox-next';
+    nextButton.setAttribute('aria-label', 'Ver imagen siguiente');
+    nextButton.innerHTML = '<i class="fas fa-chevron-right" aria-hidden="true"></i>';
+
+    const caption = document.createElement('p');
+    caption.className = 'image-lightbox-caption';
+
+    header.append(title, count, closeButton);
+    stage.append(previousButton, image, nextButton);
+    dialog.append(header, stage, caption);
+    document.body.appendChild(dialog);
+
+    let activeImages = [];
+    let activeIndex = 0;
+    let returnFocusTo = null;
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    const showImage = (index) => {
+        activeIndex = (index + activeImages.length) % activeImages.length;
+        const activeImage = activeImages[activeIndex];
+        image.src = activeImage.src;
+        image.alt = activeImage.alt;
+        caption.textContent = activeImage.alt;
+        count.textContent = `${activeIndex + 1} / ${activeImages.length}`;
+    };
+
+    const openGallery = (images, galleryTitle, trigger) => {
+        if (!images.length) return;
+
+        activeImages = images;
+        returnFocusTo = trigger;
+        title.textContent = galleryTitle;
+        const initialIndex = images.findIndex((item) => item.isInitial);
+        showImage(initialIndex === -1 ? 0 : initialIndex);
+
+        const hasMultipleImages = images.length > 1;
+        previousButton.hidden = !hasMultipleImages;
+        nextButton.hidden = !hasMultipleImages;
+        dialog.showModal();
+        closeButton.focus();
+    };
+
+    const collectImages = (imageElements, initialSource) => {
+        const images = [];
+        imageElements.forEach((element) => {
+            const src = element.currentSrc || element.src;
+            if (!src || images.some((item) => item.src === src)) return;
+            images.push({
+                src,
+                alt: element.alt || 'Imagen del proyecto',
+                isInitial: src === initialSource
+            });
+        });
+        return images;
+    };
+
+    const openFromGalleryCard = (link) => {
+        const cardImage = link.querySelector('img');
+        if (!cardImage) return;
+
+        const targetId = (link.getAttribute('href') || '').replace(/^#/, '');
+        const target = targetId ? document.getElementById(targetId) : null;
+        const projectGallery = target ? target.querySelector('.project-img.project-gallery') : null;
+        const projectImages = projectGallery ? Array.from(projectGallery.querySelectorAll('.project-slide')) : [];
+        const cardSource = cardImage.currentSrc || cardImage.src;
+        const images = collectImages(projectImages, cardSource);
+
+        if (!images.some((item) => item.src === cardSource)) {
+            images.unshift({
+                src: cardSource,
+                alt: cardImage.alt || 'Imagen del portafolio',
+                isInitial: true
+            });
+        }
+
+        const heading = target ? target.querySelector('h3') : null;
+        const caption = link.querySelector('.gallery-caption p');
+        const galleryTitle = heading ? heading.textContent.trim() :
+            (caption ? caption.textContent.trim() : 'Galería del portafolio');
+
+        openGallery(images, galleryTitle, link);
+    };
+
+    document.querySelectorAll('.gallery-link').forEach((link) => {
+        link.setAttribute('title', 'Abrir imágenes ampliadas');
+        link.addEventListener('click', (event) => {
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            openFromGalleryCard(link);
+        });
+    });
+
+    document.querySelectorAll('.project-img.project-gallery').forEach((gallery) => {
+        const projectCard = gallery.closest('.project-card');
+        const heading = projectCard ? projectCard.querySelector('h3') : null;
+        const galleryTitle = heading ? heading.textContent.trim() : 'Galería del proyecto';
+        const openButton = document.createElement('button');
+        openButton.type = 'button';
+        openButton.className = 'project-gallery-open';
+        openButton.setAttribute('aria-label', `Ampliar imágenes: ${galleryTitle}`);
+        openButton.innerHTML = '<i class="fas fa-expand" aria-hidden="true"></i><span>Ver imágenes</span>';
+        gallery.appendChild(openButton);
+
+        const openProjectGallery = (trigger) => {
+            const slides = Array.from(gallery.querySelectorAll('.project-slide'));
+            const activeSlide = gallery.querySelector('.project-slide.active');
+            const activeSource = activeSlide ? (activeSlide.currentSrc || activeSlide.src) : '';
+            const images = collectImages(slides, activeSource);
+            openGallery(images, galleryTitle, trigger);
+        };
+
+        openButton.addEventListener('click', () => openProjectGallery(openButton));
+        gallery.addEventListener('click', (event) => {
+            if (event.target.closest('.project-gallery-open')) return;
+            if (event.target.closest('.project-slide')) openProjectGallery(gallery);
+        });
+    });
+
+    previousButton.addEventListener('click', () => showImage(activeIndex - 1));
+    nextButton.addEventListener('click', () => showImage(activeIndex + 1));
+    closeButton.addEventListener('click', () => dialog.close());
+
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) dialog.close();
+    });
+
+    dialog.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            dialog.close();
+            return;
+        }
+        if (activeImages.length < 2) return;
+        if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            showImage(activeIndex - 1);
+        } else if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            showImage(activeIndex + 1);
+        }
+    });
+
+    dialog.addEventListener('touchstart', (event) => {
+        if (event.changedTouches.length !== 1) return;
+        touchStartX = event.changedTouches[0].clientX;
+        touchStartY = event.changedTouches[0].clientY;
+    }, { passive: true });
+
+    dialog.addEventListener('touchend', (event) => {
+        if (activeImages.length < 2 || event.changedTouches.length !== 1) return;
+        const deltaX = event.changedTouches[0].clientX - touchStartX;
+        const deltaY = event.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(deltaX) < 45 || Math.abs(deltaY) > 70) return;
+        showImage(activeIndex + (deltaX < 0 ? 1 : -1));
+    }, { passive: true });
+
+    dialog.addEventListener('close', () => {
+        image.removeAttribute('src');
+        if (returnFocusTo && returnFocusTo.isConnected) returnFocusTo.focus();
+    });
+}
+
 // Asegurar que el carrusel inicie al cargar el documento
 document.addEventListener("DOMContentLoaded", () => {
     // Si ya tenías el typingEffect, puedes llamarlo aquí o mantenerlo aparte
@@ -771,6 +970,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initHeroBackgroundSlider();
     startProfileCarousel();
     startProjectImageCarousels();
+    initImageLightbox();
 });
 
 // 📱 Lógica para abrir y cerrar el Menú de Hamburguesa en Móviles
