@@ -856,40 +856,8 @@ function initImageLightbox() {
         return images;
     };
 
-    const openFromGalleryCard = (link) => {
-        const cardImage = link.querySelector('img');
-        if (!cardImage) return;
-
-        const targetId = (link.getAttribute('href') || '').replace(/^#/, '');
-        const target = targetId ? document.getElementById(targetId) : null;
-        const projectGallery = target ? target.querySelector('.project-img.project-gallery') : null;
-        const projectImages = projectGallery ? Array.from(projectGallery.querySelectorAll('.project-slide')) : [];
-        const cardSource = cardImage.currentSrc || cardImage.src;
-        const images = collectImages(projectImages, cardSource);
-
-        if (!images.some((item) => item.src === cardSource)) {
-            images.unshift({
-                src: cardSource,
-                alt: cardImage.alt || 'Imagen del portafolio',
-                isInitial: true
-            });
-        }
-
-        const heading = target ? target.querySelector('h3') : null;
-        const caption = link.querySelector('.gallery-caption p');
-        const galleryTitle = heading ? heading.textContent.trim() :
-            (caption ? caption.textContent.trim() : 'Galería del portafolio');
-
-        openGallery(images, galleryTitle, link);
-    };
-
     document.querySelectorAll('.gallery-link').forEach((link) => {
-        link.setAttribute('title', 'Abrir imágenes ampliadas');
-        link.addEventListener('click', (event) => {
-            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-            event.preventDefault();
-            openFromGalleryCard(link);
-        });
+        link.setAttribute('title', 'Ir a la sección del proyecto');
     });
 
     document.querySelectorAll('.project-img.project-gallery').forEach((gallery) => {
